@@ -612,7 +612,7 @@ export const opSetReservationStatus = createServerFn({ method: "POST" })
 
     const { error } = await sb
       .from("reservations")
-      .update(patch)
+      .update(patch as never)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
 
@@ -1401,7 +1401,7 @@ export const opSetTeamRole = createServerFn({ method: "POST" })
         if ((u.email ?? "").toLowerCase() === id) return true;
         if (id.replace(/\D/g, "").length >= 6 &&
             (u.phone ?? "").replace(/\D/g, "") === id.replace(/\D/g, "")) return true;
-        const meta = u.user_metadata ?? u.raw_user_meta_data ?? {};
+        const meta = (u.user_metadata ?? (u as { raw_user_meta_data?: Record<string, any> }).raw_user_meta_data ?? {}) as Record<string, any>;
         const fullName = (meta.full_name ?? meta.name ?? meta.display_name ?? "").toLowerCase().trim();
         if (fullName && fullName === id) return true;
         if (fullName && fullName.includes(id)) return true;
@@ -1454,7 +1454,7 @@ export const opReplaceManager = createServerFn({ method: "POST" })
         if (id.replace(/\D/g, "").length >= 6 &&
             (u.phone ?? "").replace(/\D/g, "") === id.replace(/\D/g, "")) return true;
         // Match by full_name in any metadata field
-        const meta = u.user_metadata ?? u.raw_user_meta_data ?? {};
+        const meta = (u.user_metadata ?? (u as { raw_user_meta_data?: Record<string, any> }).raw_user_meta_data ?? {}) as Record<string, any>;
         const fullName = (meta.full_name ?? meta.name ?? meta.display_name ?? "").toLowerCase().trim();
         if (fullName && fullName === id) return true;
         // Partial name match (contains)
