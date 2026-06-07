@@ -612,7 +612,7 @@ export const opSetReservationStatus = createServerFn({ method: "POST" })
 
     const { error } = await sb
       .from("reservations")
-      .update(patch)
+      .update(patch as never)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
 
