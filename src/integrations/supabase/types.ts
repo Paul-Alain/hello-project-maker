@@ -65,6 +65,60 @@ export type Database = {
         }
         Relationships: []
       }
+      email_send_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          recipient_email: string
+          status: string
+          template_name: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          recipient_email?: string
+          status?: string
+          template_name?: string
+        }
+        Relationships: []
+      }
+      email_unsubscribe_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       logement_units: {
         Row: {
           available: boolean
@@ -494,6 +548,27 @@ export type Database = {
           },
         ]
       }
+      suppressed_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       testimonials: {
         Row: {
           created_at: string
@@ -505,6 +580,7 @@ export type Database = {
           name: string
           rating: number
           sort_order: number
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -516,6 +592,7 @@ export type Database = {
           name: string
           rating?: number
           sort_order?: number
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -527,6 +604,7 @@ export type Database = {
           name?: string
           rating?: number
           sort_order?: number
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -557,6 +635,10 @@ export type Database = {
     }
     Functions: {
       bootstrap_admin: { Args: { _user_id: string }; Returns: boolean }
+      enqueue_email: {
+        Args: { payload: Json; queue_name: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
