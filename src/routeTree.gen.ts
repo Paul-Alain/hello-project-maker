@@ -9,15 +9,63 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ServicesRouteImport } from './routes/services'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
+import { Route as TemoignagesRouteImport } from './routes/temoignages'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ReservationRouteImport } from './routes/reservation'
+import { Route as MonEspaceRouteImport } from './routes/mon-espace'
 import { Route as LogementsRouteImport } from './routes/logements'
+import { Route as LocalisationRouteImport } from './routes/localisation'
+import { Route as GalerieRouteImport } from './routes/galerie'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AProposRouteImport } from './routes/a-propos'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GalerieIndexRouteImport } from './routes/galerie.index'
+import { Route as NoterTokenRouteImport } from './routes/noter.$token'
+import { Route as GalerieBlockIdRouteImport } from './routes/galerie.$blockId'
+import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as AuthResetRouteImport } from './routes/auth.reset'
+import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
+import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as ApiPublicHooksReservationStatusSyncRouteImport } from './routes/api/public/hooks/reservation-status-sync'
+import { Route as ApiPublicEmailReservationConfirmationRouteImport } from './routes/api/public/email/reservation-confirmation'
+import { Route as ApiPublicEmailContactConfirmationRouteImport } from './routes/api/public/email/contact-confirmation'
 
-const ServicesRoute = ServicesRouteImport.update({
-  id: '/services',
-  path: '/services',
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemoignagesRoute = TemoignagesRouteImport.update({
+  id: '/temoignages',
+  path: '/temoignages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReservationRoute = ReservationRouteImport.update({
+  id: '/reservation',
+  path: '/reservation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonEspaceRoute = MonEspaceRouteImport.update({
+  id: '/mon-espace',
+  path: '/mon-espace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LogementsRoute = LogementsRouteImport.update({
@@ -25,9 +73,29 @@ const LogementsRoute = LogementsRouteImport.update({
   path: '/logements',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LocalisationRoute = LocalisationRouteImport.update({
+  id: '/localisation',
+  path: '/localisation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GalerieRoute = GalerieRouteImport.update({
+  id: '/galerie',
+  path: '/galerie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AProposRoute = AProposRouteImport.update({
@@ -40,52 +108,335 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GalerieIndexRoute = GalerieIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => GalerieRoute,
+} as any)
+const NoterTokenRoute = NoterTokenRouteImport.update({
+  id: '/noter/$token',
+  path: '/noter/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GalerieBlockIdRoute = GalerieBlockIdRouteImport.update({
+  id: '/$blockId',
+  path: '/$blockId',
+  getParentRoute: () => GalerieRoute,
+} as any)
+const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
+  id: '/email/unsubscribe',
+  path: '/email/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthResetRoute = AuthResetRouteImport.update({
+  id: '/reset',
+  path: '/reset',
+  getParentRoute: () => AuthRoute,
+} as any)
+const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
+  id: '/lovable/email/suppression',
+  path: '/lovable/email/suppression',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailTransactionalSendRoute =
+  LovableEmailTransactionalSendRouteImport.update({
+    id: '/lovable/email/transactional/send',
+    path: '/lovable/email/transactional/send',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailQueueProcessRoute =
+  LovableEmailQueueProcessRouteImport.update({
+    id: '/lovable/email/queue/process',
+    path: '/lovable/email/queue/process',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicHooksReservationStatusSyncRoute =
+  ApiPublicHooksReservationStatusSyncRouteImport.update({
+    id: '/api/public/hooks/reservation-status-sync',
+    path: '/api/public/hooks/reservation-status-sync',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicEmailReservationConfirmationRoute =
+  ApiPublicEmailReservationConfirmationRouteImport.update({
+    id: '/api/public/email/reservation-confirmation',
+    path: '/api/public/email/reservation-confirmation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicEmailContactConfirmationRoute =
+  ApiPublicEmailContactConfirmationRouteImport.update({
+    id: '/api/public/email/contact-confirmation',
+    path: '/api/public/email/contact-confirmation',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/a-propos': typeof AProposRoute
+  '/admin': typeof AdminRoute
+  '/auth': typeof AuthRouteWithChildren
   '/contact': typeof ContactRoute
+  '/galerie': typeof GalerieRouteWithChildren
+  '/localisation': typeof LocalisationRoute
   '/logements': typeof LogementsRoute
-  '/services': typeof ServicesRoute
+  '/mon-espace': typeof MonEspaceRoute
+  '/reservation': typeof ReservationRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/temoignages': typeof TemoignagesRoute
+  '/unsubscribe': typeof UnsubscribeRoute
+  '/auth/reset': typeof AuthResetRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/galerie/$blockId': typeof GalerieBlockIdRoute
+  '/noter/$token': typeof NoterTokenRoute
+  '/galerie/': typeof GalerieIndexRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/email/contact-confirmation': typeof ApiPublicEmailContactConfirmationRoute
+  '/api/public/email/reservation-confirmation': typeof ApiPublicEmailReservationConfirmationRoute
+  '/api/public/hooks/reservation-status-sync': typeof ApiPublicHooksReservationStatusSyncRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/a-propos': typeof AProposRoute
+  '/admin': typeof AdminRoute
+  '/auth': typeof AuthRouteWithChildren
   '/contact': typeof ContactRoute
+  '/localisation': typeof LocalisationRoute
   '/logements': typeof LogementsRoute
-  '/services': typeof ServicesRoute
+  '/mon-espace': typeof MonEspaceRoute
+  '/reservation': typeof ReservationRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/temoignages': typeof TemoignagesRoute
+  '/unsubscribe': typeof UnsubscribeRoute
+  '/auth/reset': typeof AuthResetRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/galerie/$blockId': typeof GalerieBlockIdRoute
+  '/noter/$token': typeof NoterTokenRoute
+  '/galerie': typeof GalerieIndexRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/email/contact-confirmation': typeof ApiPublicEmailContactConfirmationRoute
+  '/api/public/email/reservation-confirmation': typeof ApiPublicEmailReservationConfirmationRoute
+  '/api/public/hooks/reservation-status-sync': typeof ApiPublicHooksReservationStatusSyncRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/a-propos': typeof AProposRoute
+  '/admin': typeof AdminRoute
+  '/auth': typeof AuthRouteWithChildren
   '/contact': typeof ContactRoute
+  '/galerie': typeof GalerieRouteWithChildren
+  '/localisation': typeof LocalisationRoute
   '/logements': typeof LogementsRoute
-  '/services': typeof ServicesRoute
+  '/mon-espace': typeof MonEspaceRoute
+  '/reservation': typeof ReservationRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/temoignages': typeof TemoignagesRoute
+  '/unsubscribe': typeof UnsubscribeRoute
+  '/auth/reset': typeof AuthResetRoute
+  '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/galerie/$blockId': typeof GalerieBlockIdRoute
+  '/noter/$token': typeof NoterTokenRoute
+  '/galerie/': typeof GalerieIndexRoute
+  '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/email/contact-confirmation': typeof ApiPublicEmailContactConfirmationRoute
+  '/api/public/email/reservation-confirmation': typeof ApiPublicEmailReservationConfirmationRoute
+  '/api/public/hooks/reservation-status-sync': typeof ApiPublicHooksReservationStatusSyncRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
+  '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/a-propos' | '/contact' | '/logements' | '/services'
+  fullPaths:
+    | '/'
+    | '/a-propos'
+    | '/admin'
+    | '/auth'
+    | '/contact'
+    | '/galerie'
+    | '/localisation'
+    | '/logements'
+    | '/mon-espace'
+    | '/reservation'
+    | '/reset-password'
+    | '/sitemap.xml'
+    | '/temoignages'
+    | '/unsubscribe'
+    | '/auth/reset'
+    | '/email/unsubscribe'
+    | '/galerie/$blockId'
+    | '/noter/$token'
+    | '/galerie/'
+    | '/lovable/email/suppression'
+    | '/api/public/email/contact-confirmation'
+    | '/api/public/email/reservation-confirmation'
+    | '/api/public/hooks/reservation-status-sync'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
+    | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/a-propos' | '/contact' | '/logements' | '/services'
-  id: '__root__' | '/' | '/a-propos' | '/contact' | '/logements' | '/services'
+  to:
+    | '/'
+    | '/a-propos'
+    | '/admin'
+    | '/auth'
+    | '/contact'
+    | '/localisation'
+    | '/logements'
+    | '/mon-espace'
+    | '/reservation'
+    | '/reset-password'
+    | '/sitemap.xml'
+    | '/temoignages'
+    | '/unsubscribe'
+    | '/auth/reset'
+    | '/email/unsubscribe'
+    | '/galerie/$blockId'
+    | '/noter/$token'
+    | '/galerie'
+    | '/lovable/email/suppression'
+    | '/api/public/email/contact-confirmation'
+    | '/api/public/email/reservation-confirmation'
+    | '/api/public/hooks/reservation-status-sync'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
+    | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
+  id:
+    | '__root__'
+    | '/'
+    | '/a-propos'
+    | '/admin'
+    | '/auth'
+    | '/contact'
+    | '/galerie'
+    | '/localisation'
+    | '/logements'
+    | '/mon-espace'
+    | '/reservation'
+    | '/reset-password'
+    | '/sitemap.xml'
+    | '/temoignages'
+    | '/unsubscribe'
+    | '/auth/reset'
+    | '/email/unsubscribe'
+    | '/galerie/$blockId'
+    | '/noter/$token'
+    | '/galerie/'
+    | '/lovable/email/suppression'
+    | '/api/public/email/contact-confirmation'
+    | '/api/public/email/reservation-confirmation'
+    | '/api/public/hooks/reservation-status-sync'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
+    | '/lovable/email/queue/process'
+    | '/lovable/email/transactional/preview'
+    | '/lovable/email/transactional/send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AProposRoute: typeof AProposRoute
+  AdminRoute: typeof AdminRoute
+  AuthRoute: typeof AuthRouteWithChildren
   ContactRoute: typeof ContactRoute
+  GalerieRoute: typeof GalerieRouteWithChildren
+  LocalisationRoute: typeof LocalisationRoute
   LogementsRoute: typeof LogementsRoute
-  ServicesRoute: typeof ServicesRoute
+  MonEspaceRoute: typeof MonEspaceRoute
+  ReservationRoute: typeof ReservationRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TemoignagesRoute: typeof TemoignagesRoute
+  UnsubscribeRoute: typeof UnsubscribeRoute
+  EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  NoterTokenRoute: typeof NoterTokenRoute
+  LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiPublicEmailContactConfirmationRoute: typeof ApiPublicEmailContactConfirmationRoute
+  ApiPublicEmailReservationConfirmationRoute: typeof ApiPublicEmailReservationConfirmationRoute
+  ApiPublicHooksReservationStatusSyncRoute: typeof ApiPublicHooksReservationStatusSyncRoute
+  LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
+  LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
+  LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
+  LovableEmailTransactionalSendRoute: typeof LovableEmailTransactionalSendRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/services': {
-      id: '/services'
-      path: '/services'
-      fullPath: '/services'
-      preLoaderRoute: typeof ServicesRouteImport
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/temoignages': {
+      id: '/temoignages'
+      path: '/temoignages'
+      fullPath: '/temoignages'
+      preLoaderRoute: typeof TemoignagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reservation': {
+      id: '/reservation'
+      path: '/reservation'
+      fullPath: '/reservation'
+      preLoaderRoute: typeof ReservationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mon-espace': {
+      id: '/mon-espace'
+      path: '/mon-espace'
+      fullPath: '/mon-espace'
+      preLoaderRoute: typeof MonEspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logements': {
@@ -95,11 +446,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LogementsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/localisation': {
+      id: '/localisation'
+      path: '/localisation'
+      fullPath: '/localisation'
+      preLoaderRoute: typeof LocalisationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/galerie': {
+      id: '/galerie'
+      path: '/galerie'
+      fullPath: '/galerie'
+      preLoaderRoute: typeof GalerieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contact': {
       id: '/contact'
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/a-propos': {
@@ -116,26 +495,160 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/galerie/': {
+      id: '/galerie/'
+      path: '/'
+      fullPath: '/galerie/'
+      preLoaderRoute: typeof GalerieIndexRouteImport
+      parentRoute: typeof GalerieRoute
+    }
+    '/noter/$token': {
+      id: '/noter/$token'
+      path: '/noter/$token'
+      fullPath: '/noter/$token'
+      preLoaderRoute: typeof NoterTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/galerie/$blockId': {
+      id: '/galerie/$blockId'
+      path: '/$blockId'
+      fullPath: '/galerie/$blockId'
+      preLoaderRoute: typeof GalerieBlockIdRouteImport
+      parentRoute: typeof GalerieRoute
+    }
+    '/email/unsubscribe': {
+      id: '/email/unsubscribe'
+      path: '/email/unsubscribe'
+      fullPath: '/email/unsubscribe'
+      preLoaderRoute: typeof EmailUnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/reset': {
+      id: '/auth/reset'
+      path: '/reset'
+      fullPath: '/auth/reset'
+      preLoaderRoute: typeof AuthResetRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/lovable/email/suppression': {
+      id: '/lovable/email/suppression'
+      path: '/lovable/email/suppression'
+      fullPath: '/lovable/email/suppression'
+      preLoaderRoute: typeof LovableEmailSuppressionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/send': {
+      id: '/lovable/email/transactional/send'
+      path: '/lovable/email/transactional/send'
+      fullPath: '/lovable/email/transactional/send'
+      preLoaderRoute: typeof LovableEmailTransactionalSendRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/queue/process': {
+      id: '/lovable/email/queue/process'
+      path: '/lovable/email/queue/process'
+      fullPath: '/lovable/email/queue/process'
+      preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/hooks/reservation-status-sync': {
+      id: '/api/public/hooks/reservation-status-sync'
+      path: '/api/public/hooks/reservation-status-sync'
+      fullPath: '/api/public/hooks/reservation-status-sync'
+      preLoaderRoute: typeof ApiPublicHooksReservationStatusSyncRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/email/reservation-confirmation': {
+      id: '/api/public/email/reservation-confirmation'
+      path: '/api/public/email/reservation-confirmation'
+      fullPath: '/api/public/email/reservation-confirmation'
+      preLoaderRoute: typeof ApiPublicEmailReservationConfirmationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/email/contact-confirmation': {
+      id: '/api/public/email/contact-confirmation'
+      path: '/api/public/email/contact-confirmation'
+      fullPath: '/api/public/email/contact-confirmation'
+      preLoaderRoute: typeof ApiPublicEmailContactConfirmationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
+
+interface AuthRouteChildren {
+  AuthResetRoute: typeof AuthResetRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthResetRoute: AuthResetRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
+interface GalerieRouteChildren {
+  GalerieBlockIdRoute: typeof GalerieBlockIdRoute
+  GalerieIndexRoute: typeof GalerieIndexRoute
+}
+
+const GalerieRouteChildren: GalerieRouteChildren = {
+  GalerieBlockIdRoute: GalerieBlockIdRoute,
+  GalerieIndexRoute: GalerieIndexRoute,
+}
+
+const GalerieRouteWithChildren =
+  GalerieRoute._addFileChildren(GalerieRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AProposRoute: AProposRoute,
+  AdminRoute: AdminRoute,
+  AuthRoute: AuthRouteWithChildren,
   ContactRoute: ContactRoute,
+  GalerieRoute: GalerieRouteWithChildren,
+  LocalisationRoute: LocalisationRoute,
   LogementsRoute: LogementsRoute,
-  ServicesRoute: ServicesRoute,
+  MonEspaceRoute: MonEspaceRoute,
+  ReservationRoute: ReservationRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TemoignagesRoute: TemoignagesRoute,
+  UnsubscribeRoute: UnsubscribeRoute,
+  EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  NoterTokenRoute: NoterTokenRoute,
+  LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiPublicEmailContactConfirmationRoute:
+    ApiPublicEmailContactConfirmationRoute,
+  ApiPublicEmailReservationConfirmationRoute:
+    ApiPublicEmailReservationConfirmationRoute,
+  ApiPublicHooksReservationStatusSyncRoute:
+    ApiPublicHooksReservationStatusSyncRoute,
+  LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
+  LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
+  LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
+  LovableEmailTransactionalSendRoute: LovableEmailTransactionalSendRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

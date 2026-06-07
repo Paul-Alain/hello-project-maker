@@ -1,0 +1,1124 @@
+import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
+  Loader2,
+  LogOut,
+  User as UserIcon,
+  CalendarDays,
+  MessageSquare,
+  Star,
+  Users,
+  PenLine,
+  KeyRound,
+  Send,
+  ShieldCheck,
+} from "lucide-react";
+import type { Session } from "@supabase/supabase-js";
+import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ClientNotifications } from "@/components/notifications/client-notifications";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { nowCam, dateTimeMsCam } from "@/lib/cameroun-time";
+import { useLanguage } from "@/lib/i18n/language-context";
+import { useAdminStatus } from "@/lib/use-admin-status";
+import {
+  encodeReview,
+  parseReviewMeta,
+  stripReviewMeta,
+  encodeMessage,
+  parseMessageMeta,
+  stripMessageMeta,
+  PENDING_SORT_ORDER,
+  type ReviewMeta,
+} from "@/lib/data";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const COMPLETED_STATUS = "terminée"; // legacy — on vérifie aussi confirmée + départ dépassé
+const isCompleted = (r: { status: string; departure_date: string; departure_time: string }) => {
+  if (r.status === COMPLETED_STATUS || r.status === "checkin") return true;
+  if (r.status !== "confirmée") return false;
+  const depMs = dateTimeMsCam(r.departure_date, r.departure_time, "11:00");
+  return depMs <= nowCam();
+};
+
+export const Route = createFileRoute("/mon-espace")({
+  head: () => ({
+    meta: [
+      { title: "Mon espace client – Panorama P" },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
+  component: AccountPage,
+});
+
+function AccountPage() {
+  const { t } = useLanguage();
+  const navigate = useNavigate();
+  const { isAdmin } = useAdminStatus();
+  const [session, setSession] = useState<Session | null>(null);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+      if (!s) navigate({ to: "/auth" });
+    });
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setChecking(false);
+      if (!data.session) navigate({ to: "/auth" });
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [navigate]);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/" });
+  };
+
+  if (checking || !session) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-gold" />
+      </div>
+    );
+  }
+
+  const userId = session.user.id;
+
+  return (
+    <>
+      <PageHeader title={t.account.title} subtitle={t.account.subtitle}>
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <ClientNameBadge userId={userId} email={session.user.email ?? ""} />
+          <div className="flex items-center gap-2">
+            <ClientNotifications userId={userId} />
+            <Button variant="outline" size="sm" onClick={signOut}>
+              <LogOut className="h-4 w-4" /> {t.account.signOut}
+            </Button>
+          </div>
+        </div>
+      </PageHeader>
+
+      {isAdmin && (
+        <div className="mx-auto mt-6 max-w-4xl px-4 sm:px-6">
+          <AdminAccessButton />
+        </div>
+      )}
+
+
+      <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+        <Tabs defaultValue="profile">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4">
+            <TabsTrigger value="profile" className="gap-1.5">
+              <UserIcon className="h-4 w-4" />
+              <span className="hidden sm:inline">{t.account.tabs.profile}</span>
+              <span className="sm:hidden">{t.account.tabs.profile}</span>
+            </TabsTrigger>
+            <TabsTrigger value="reservations" className="gap-1.5">
+              <CalendarDays className="h-4 w-4" />
+              <span className="truncate">{t.account.tabs.reservations}</span>
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="gap-1.5">
+              <MessageSquare className="h-4 w-4" />
+              <span className="truncate">{t.account.tabs.messages}</span>
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="gap-1.5">
+              <Star className="h-4 w-4" />
+              <span className="truncate">{t.account.tabs.reviews}</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile" className="mt-6 space-y-6">
+            <ProfileSection userId={userId} email={session.user.email ?? ""} />
+            <SecuritySection />
+          </TabsContent>
+
+          <TabsContent value="reservations" className="mt-6">
+            <ReservationsSection userId={userId} />
+          </TabsContent>
+          <TabsContent value="messages" className="mt-6">
+            <MessagesSection userId={userId} email={session.user.email ?? ""} />
+          </TabsContent>
+          <TabsContent value="reviews" className="mt-6">
+            <ReviewsSection userId={userId} />
+          </TabsContent>
+        </Tabs>
+      </section>
+    </>
+  );
+}
+
+function SectionLoader() {
+  return <Loader2 className="h-5 w-5 animate-spin text-gold" />;
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border/70 bg-card/50 p-8 text-center text-sm text-muted-foreground">
+      {text}
+    </div>
+  );
+}
+
+const fmtDate = (d: string) => {
+  const date = new Date(d);
+  return Number.isNaN(date.getTime()) ? d : date.toLocaleDateString();
+};
+
+/* ---------------- Profile ---------------- */
+
+interface ProfileRow {
+  id: string;
+  full_name: string | null;
+  phone_number: string | null;
+  avatar_url: string | null;
+}
+
+function ProfileSection({ userId, email }: { userId: string; email: string }) {
+  const [editing, setEditing] = useState(false);
+  const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [avatar, setAvatar] = useState("");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["my-profile", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, phone_number, avatar_url")
+        .eq("id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as ProfileRow | null;
+    },
+  });
+
+  useEffect(() => {
+    if (data) {
+      setFullName(data.full_name ?? "");
+      setPhone(data.phone_number ?? "");
+      setAvatar(data.avatar_url ?? "");
+    }
+  }, [data]);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("profiles").upsert(
+        {
+          id: userId,
+          full_name: fullName || null,
+          phone_number: phone || null,
+          avatar_url: avatar || null,
+        },
+        { onConflict: "id" },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(t.account.profile.saved);
+      qc.invalidateQueries({ queryKey: ["my-profile", userId] });
+    },
+    onError: () => toast.error(t.account.profile.error),
+  });
+
+  if (isLoading) return <SectionLoader />;
+
+  return (
+    <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-soft sm:p-8">
+      <div className="mb-6 flex items-center gap-4">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-secondary">
+          {avatar ? (
+            <img src={avatar} alt={fullName || email} className="h-full w-full object-cover" />
+          ) : (
+            <UserIcon className="h-7 w-7 text-muted-foreground" />
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate font-display text-lg font-semibold">
+            {fullName || email}
+          </p>
+          <p className="truncate text-sm text-muted-foreground">{email}</p>
+        </div>
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          mutation.mutate();
+        }}
+        className="space-y-4"
+      >
+        <div className="space-y-1.5">
+          <Label>{t.account.profile.fullName}</Label>
+          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>{t.account.profile.phone}</Label>
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>{t.account.profile.avatar}</Label>
+          <Input
+            value={avatar}
+            onChange={(e) => setAvatar(e.target.value)}
+            placeholder="https://…"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>{t.account.profile.email}</Label>
+          <Input value={email} disabled />
+        </div>
+        <Button type="submit" variant="gold" disabled={mutation.isPending}>
+          {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          {mutation.isPending ? t.account.profile.saving : t.account.profile.save}
+        </Button>
+      </form>
+
+      {/* ── Zone de suppression du compte ── */}
+      <div className="mt-8 border-t border-red-200 pt-6">
+        <p className="text-sm font-semibold text-destructive">Zone dangereuse</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          La suppression de votre compte est définitive. Toutes vos données personnelles
+          seront effacées. Vos réservations resteront dans nos archives pour des raisons
+          administratives.
+        </p>
+        <DeleteAccountButton email={email} />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Security (change password) ---------------- */
+
+function SecuritySection() {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirm) {
+      toast.error("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setPassword("");
+    setConfirm("");
+    toast.success("Votre mot de passe a été mis à jour.");
+  };
+
+  return (
+    <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-soft sm:p-8">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+          <KeyRound className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="font-display text-lg font-semibold">Sécurité</p>
+          <p className="text-sm text-muted-foreground">Modifier votre mot de passe</p>
+        </div>
+      </div>
+
+      <form onSubmit={submit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label>Nouveau mot de passe</Label>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Confirmer le mot de passe</Label>
+          <Input
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+            minLength={6}
+          />
+        </div>
+        <Button type="submit" variant="gold" disabled={saving}>
+          {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+          Mettre à jour
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+
+
+/* ---------------- Shared review data ---------------- */
+
+interface ReviewRow {
+  id: string;
+  rating: number;
+  location: string | null;
+  message_fr: string;
+  sort_order: number;
+  created_at: string;
+}
+
+function useMyReviews(userId: string) {
+  return useQuery({
+    queryKey: ["my-reviews", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("testimonials")
+        .select("id, rating, location, message_fr, sort_order, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ReviewRow[];
+    },
+  });
+}
+
+/* ---------------- Star rating input ---------------- */
+
+function StarInput({
+  value,
+  onChange,
+  label,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm">{label}</span>
+      <div className="flex items-center gap-0.5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            aria-label={`${label} ${i + 1}`}
+            onClick={() => onChange(i + 1)}
+            className="p-0.5"
+          >
+            <Star
+              className={`h-5 w-5 transition-colors ${
+                i < value ? "fill-gold text-gold" : "text-muted-foreground/40"
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Reservations ---------------- */
+
+interface ReservationRow {
+  id: string;
+  name: string;
+  arrival_date: string;
+  departure_date: string;
+  arrival_time: string;
+  departure_time: string;
+  guests: number;
+  logement_type: string | null;
+  message: string | null;
+  status: string;
+  total_amount: number;
+  advance_amount: number;
+  created_at: string;
+}
+
+function ReservationsSection({ userId }: { userId: string }) {
+  const { t } = useLanguage();
+  const [reviewTarget, setReviewTarget] = useState<ReservationRow | null>(null);
+
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["my-reservations", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("id, name, arrival_date, departure_date, arrival_time, departure_time, guests, logement_type, message, status, total_amount, advance_amount, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ReservationRow[];
+    },
+  });
+
+  const { data: reviews = [] } = useMyReviews(userId);
+  const reviewedReservationIds = useMemo(() => {
+    const set = new Set<string>();
+    for (const rev of reviews) {
+      const meta = parseReviewMeta(rev.message_fr);
+      if (meta?.reservationId) set.add(meta.reservationId);
+    }
+    return set;
+  }, [reviews]);
+
+  if (isLoading) return <SectionLoader />;
+  if (data.length === 0) return <EmptyState text={t.account.empty.reservations} />;
+
+  return (
+    <>
+      <div className="space-y-3">
+        {data.map((r) => {
+          const completed = isCompleted(r);
+          const alreadyReviewed = reviewedReservationIds.has(r.id);
+          return (
+            <div key={r.id} className="rounded-2xl border border-border/60 bg-card p-5 shadow-soft">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-medium">
+                  {fmtDate(r.arrival_date)} → {fmtDate(r.departure_date)}
+                </p>
+                {(() => {
+                  const arrMs = dateTimeMsCam(r.arrival_date, r.arrival_time, "14:00");
+                  const depMs = dateTimeMsCam(r.departure_date, r.departure_time, "11:00");
+                  const nowMs = nowCam();
+                  let label = "En attente";
+                  let cls   = "bg-amber-100 text-amber-700";
+                  if (r.status === "annulée") { label = "Annulée"; cls = "bg-red-100 text-red-700"; }
+                  else if (r.status === "confirmée" && depMs <= nowMs) { label = "Logé ✓"; cls = "bg-blue-100 text-blue-700"; }
+                  else if (r.status === "confirmée") { label = "Confirmée"; cls = "bg-emerald-100 text-emerald-700"; }
+                  return <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label}</span>;
+                })()}
+              </div>
+              <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" /> {r.guests} {t.account.labels.guests}
+                </span>
+                {r.logement_type && <span>· {r.logement_type}</span>}
+              </p>
+              {/* Prix et solde */}
+              {r.total_amount > 0 && (
+                <div className="mt-2 flex gap-4 text-sm">
+                  <span className="text-muted-foreground">
+                    Total : <span className="font-semibold text-foreground">{r.total_amount.toLocaleString("fr-FR")} FCFA</span>
+                  </span>
+                  {r.advance_amount > 0 && (
+                    <span className="text-muted-foreground">
+                      Solde : <span className="font-semibold text-gold">
+                        {Math.max(0, r.total_amount - r.advance_amount).toLocaleString("fr-FR")} FCFA
+                      </span>
+                    </span>
+                  )}
+                </div>
+              )}
+              {r.message && <p className="mt-2 text-sm">{r.message}</p>}
+              {completed && (
+                <div className="mt-4 border-t border-border/60 pt-4">
+                  {alreadyReviewed ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Star className="h-3.5 w-3.5 fill-gold text-gold" />
+                      {t.account.review.already}
+                    </span>
+                  ) : (
+                    <Button
+                      variant="gold"
+                      size="sm"
+                      onClick={() => setReviewTarget(r)}
+                    >
+                      <PenLine className="h-4 w-4" /> {t.account.review.cta}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <ReviewDialog
+        userId={userId}
+        reservation={reviewTarget}
+        onClose={() => setReviewTarget(null)}
+      />
+    </>
+  );
+}
+
+/* ---------------- Review dialog ---------------- */
+
+const SUB_KEYS = ["cleanliness", "comfort", "security", "hospitality", "value"] as const;
+type SubKey = (typeof SUB_KEYS)[number];
+
+function ReviewDialog({
+  userId,
+  reservation,
+  onClose,
+}: {
+  userId: string;
+  reservation: ReservationRow | null;
+  onClose: () => void;
+}) {
+  const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [overall, setOverall] = useState(5);
+  const [subs, setSubs] = useState<Record<SubKey, number>>({
+    cleanliness: 5,
+    comfort: 5,
+    security: 5,
+    hospitality: 5,
+    value: 5,
+  });
+  const [comment, setComment] = useState("");
+
+  useEffect(() => {
+    if (reservation) {
+      setOverall(5);
+      setSubs({ cleanliness: 5, comfort: 5, security: 5, hospitality: 5, value: 5 });
+      setComment("");
+    }
+  }, [reservation]);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!reservation) return;
+      const meta: ReviewMeta = {
+        reservationId: reservation.id,
+        cleanliness: subs.cleanliness,
+        comfort: subs.comfort,
+        security: subs.security,
+        hospitality: subs.hospitality,
+        value: subs.value,
+      };
+      const { error } = await supabase.from("testimonials").insert({
+        user_id: userId,
+        name: reservation.name || "Client",
+        rating: overall,
+        sort_order: PENDING_SORT_ORDER,
+        message_fr: encodeReview(comment, meta),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(t.account.review.success);
+      qc.invalidateQueries({ queryKey: ["my-reviews", userId] });
+      onClose();
+    },
+    onError: () => toast.error(t.account.review.error),
+  });
+
+  return (
+    <Dialog open={!!reservation} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t.account.review.title}</DialogTitle>
+          <DialogDescription>{t.account.review.description}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="rounded-xl border border-border/60 bg-secondary/40 p-4">
+            <StarInput value={overall} onChange={setOverall} label={t.account.review.overall} />
+          </div>
+          <div className="space-y-3">
+            {SUB_KEYS.map((key) => (
+              <StarInput
+                key={key}
+                value={subs[key]}
+                onChange={(v) => setSubs((s) => ({ ...s, [key]: v }))}
+                label={t.account.review[key]}
+              />
+            ))}
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t.account.review.comment}</Label>
+            <Textarea
+              rows={4}
+              value={comment}
+              maxLength={1000}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder={t.account.review.commentPlaceholder}
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>
+            {t.account.review.cancel}
+          </Button>
+          <Button variant="gold" onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+            {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {mutation.isPending ? t.account.review.submitting : t.account.review.submit}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------------- Messages / Support ---------------- */
+
+interface MessageRow {
+  id: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
+
+const STATUS_LABEL = (
+  status: string,
+  t: ReturnType<typeof useLanguage>["t"],
+): string => {
+  if (status === "lu") return t.account.support.statusRead;
+  if (status === "répondu") return t.account.support.statusReplied;
+  return t.account.support.statusNew;
+};
+
+function MessagesSection({ userId, email }: { userId: string; email: string }) {
+  const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [subject, setSubject] = useState("");
+  const [content, setContent] = useState("");
+  const [reservationId, setReservationId] = useState<string>("none");
+
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["my-messages", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("id, message, status, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as MessageRow[];
+    },
+  });
+
+  const { data: reservations = [] } = useQuery({
+    queryKey: ["my-reservations", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("id, name, arrival_date, departure_date, arrival_time, departure_time, guests, logement_type, message, status, total_amount, advance_amount, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ReservationRow[];
+    },
+  });
+
+  const { data: profile } = useQuery({
+    queryKey: ["my-profile", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, phone_number, avatar_url")
+        .eq("id", userId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as ProfileRow | null;
+    },
+  });
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const body = content.trim();
+      if (!body) return;
+      const { error } = await supabase.from("messages").insert({
+        user_id: userId,
+        name: profile?.full_name || email || "Client",
+        email: email || null,
+        phone: profile?.phone_number || null,
+        status: "nouveau",
+        message: encodeMessage(body, {
+          subject: subject.trim() || undefined,
+          reservationId: reservationId !== "none" ? reservationId : undefined,
+        }),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(t.account.support.success);
+      setSubject("");
+      setContent("");
+      setReservationId("none");
+      qc.invalidateQueries({ queryKey: ["my-messages", userId] });
+    },
+    onError: () => toast.error(t.account.support.error),
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Compose */}
+      <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-soft sm:p-8">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+            <MessageSquare className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <p className="font-display text-lg font-semibold">
+            {t.account.support.compose}
+          </p>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutation.mutate();
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-1.5">
+            <Label>{t.account.support.subject}</Label>
+            <Input
+              value={subject}
+              maxLength={150}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder={t.account.support.subjectPlaceholder}
+            />
+          </div>
+
+          {reservations.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>{t.account.support.relatedReservation}</Label>
+              <Select value={reservationId} onValueChange={setReservationId}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">
+                    {t.account.support.noReservation}
+                  </SelectItem>
+                  {reservations.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {fmtDate(r.arrival_date)} → {fmtDate(r.departure_date)}
+                      {r.logement_type ? ` · ${r.logement_type}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label>{t.account.support.content}</Label>
+            <Textarea
+              rows={4}
+              required
+              value={content}
+              maxLength={2000}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder={t.account.support.contentPlaceholder}
+            />
+          </div>
+
+          <Button
+            type="submit"
+            variant="gold"
+            disabled={mutation.isPending || !content.trim()}
+          >
+            {mutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            {mutation.isPending ? t.account.support.sending : t.account.support.send}
+          </Button>
+        </form>
+      </div>
+
+      {/* History */}
+      <div className="space-y-3">
+        <h3 className="font-display text-base font-semibold">
+          {t.account.support.historyTitle}
+        </h3>
+        {isLoading ? (
+          <SectionLoader />
+        ) : data.length === 0 ? (
+          <EmptyState text={t.account.empty.messages} />
+        ) : (
+          data.map((m) => {
+            const meta = parseMessageMeta(m.message);
+            const body = stripMessageMeta(m.message);
+            const reservation = reservations.find(
+              (r) => r.id === meta?.reservationId,
+            );
+            return (
+              <div
+                key={m.id}
+                className="rounded-2xl border border-border/60 bg-card p-5 shadow-soft"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    {fmtDate(m.created_at)}
+                  </p>
+                  <Badge
+                    variant={m.status === "répondu" ? "default" : "secondary"}
+                  >
+                    {STATUS_LABEL(m.status, t)}
+                  </Badge>
+                </div>
+                {meta?.subject && (
+                  <p className="mt-2 font-medium">{meta.subject}</p>
+                )}
+                <p className="mt-1 whitespace-pre-line text-sm">{body}</p>
+                {reservation && (
+                  <p className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    {fmtDate(reservation.arrival_date)} →{" "}
+                    {fmtDate(reservation.departure_date)}
+                  </p>
+                )}
+                {meta?.reply && (
+                  <div className="mt-3 rounded-xl border border-gold/30 bg-gold/5 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gold">
+                      {t.account.support.reply}
+                    </p>
+                    <p className="mt-1 whitespace-pre-line text-sm">
+                      {meta.reply}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Reviews ---------------- */
+
+function ReviewsSection({ userId }: { userId: string }) {
+  const { t } = useLanguage();
+  const { data = [], isLoading } = useMyReviews(userId);
+
+  if (isLoading) return <SectionLoader />;
+  if (data.length === 0) return <EmptyState text={t.account.empty.reviews} />;
+
+  return (
+    <div className="space-y-3">
+      {data.map((rev) => {
+        const pending = rev.sort_order < 0;
+        const comment = stripReviewMeta(rev.message_fr);
+        return (
+          <div key={rev.id} className="rounded-2xl border border-border/60 bg-card p-5 shadow-soft">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-4 w-4 ${i < rev.rating ? "fill-gold text-gold" : "text-muted-foreground/40"}`}
+                  />
+                ))}
+              </div>
+              <Badge variant={pending ? "secondary" : "default"}>
+                {pending ? t.account.review.pending : t.account.review.approved}
+              </Badge>
+            </div>
+            {comment && <p className="mt-2 text-sm">{comment}</p>}
+            <p className="mt-1 text-xs text-muted-foreground">
+              {[rev.location, fmtDate(rev.created_at)].filter(Boolean).join(" · ")}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+
+/* ── Client Name Badge (nom visible en permanence) ── */
+function ClientNameBadge({ userId, email }: { userId: string; email: string }) {
+  const { data: profile } = useQuery({
+    queryKey: ["profile-name", userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", userId)
+        .single();
+      return data;
+    },
+    staleTime: 60_000,
+  });
+  const name = profile?.full_name || email;
+  return (
+    <div className="flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-4 py-1.5">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gold/20">
+        {profile?.avatar_url ? (
+          <img src={profile.avatar_url} alt={name} className="h-7 w-7 rounded-full object-cover" />
+        ) : (
+          <UserIcon className="h-4 w-4 text-gold" />
+        )}
+      </div>
+      <span className="font-medium text-sm text-gold">{name}</span>
+    </div>
+  );
+}
+
+/* ── Admin Access Button 3D ── */
+function AdminAccessButton() {
+  const { isAdmin, roles } = useAdminStatus();
+  const tier = roles?.includes("proprietaire") || roles?.includes("admin")
+    ? "Propriétaire"
+    : roles?.includes("gestionnaire")
+    ? "Gestionnaire"
+    : "Administrateur";
+
+  return (
+    <Link to="/admin" className="block w-full">
+      <div
+        className="w-full rounded-2xl bg-amber-800 px-6 py-5 text-white text-center cursor-pointer
+                   transition-transform hover:translate-y-[-2px] active:translate-y-[1px]"
+        style={{
+          boxShadow: "4px 4px 0 0 #000, 6px 6px 0 0 rgba(0,0,0,0.3)",
+          border: "3px solid #000",
+        }}
+      >
+        <div className="flex items-center justify-center gap-3">
+          <ShieldCheck className="h-7 w-7" />
+          <div className="text-left">
+            <p className="font-display text-lg font-bold leading-tight">
+              Tableau de bord
+            </p>
+            <p className="text-sm opacity-80">
+              Vous êtes connecté en tant que <strong>{tier}</strong>
+            </p>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/* ---------------- Delete Account ---------------- */
+
+function DeleteAccountButton({ email }: { email: string }) {
+  const navigate  = useNavigate();
+  const [open,    setOpen]    = useState(false);
+  const [confirm, setConfirm] = useState("");
+  const [busy,    setBusy]    = useState(false);
+
+  const handleDelete = async () => {
+    if (confirm.trim().toUpperCase() !== "SUPPRIMER") {
+      toast.error("Tapez exactement SUPPRIMER pour confirmer.");
+      return;
+    }
+    setBusy(true);
+    try {
+      // Détacher les réservations du compte (user_id → null)
+      await supabase
+        .from("reservations")
+        .update({ user_id: null })
+        .eq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "");
+
+      // Supprimer le profil
+      await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", (await supabase.auth.getUser()).data.user?.id ?? "");
+
+      // Déconnecter puis supprimer le compte
+      await supabase.auth.signOut();
+
+      toast.success("Votre compte a été supprimé.");
+      navigate({ to: "/" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur lors de la suppression.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        className="mt-3 border-red-300 text-destructive hover:bg-red-50"
+        onClick={() => { setOpen(true); setConfirm(""); }}
+      >
+        Supprimer mon compte
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              Supprimer votre compte
+            </DialogTitle>
+            <DialogDescription className="space-y-2 pt-2">
+              <span className="block">
+                Vous êtes sur le point de supprimer définitivement le compte associé à{" "}
+                <strong>{email}</strong>.
+              </span>
+              <span className="block text-destructive font-medium">
+                ⚠️ Cette action est irréversible.
+              </span>
+              <span className="block">
+                Vos données personnelles seront supprimées. Vos réservations resteront
+                dans les archives de la résidence pour des raisons administratives.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <Label htmlFor="confirm-delete" className="text-sm font-medium">
+              Tapez <strong className="text-destructive">SUPPRIMER</strong> pour confirmer
+            </Label>
+            <Input
+              id="confirm-delete"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="SUPPRIMER"
+              className="border-red-300 focus:ring-red-400"
+              autoComplete="off"
+            />
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={busy}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={busy || confirm.trim().toUpperCase() !== "SUPPRIMER"}
+              onClick={handleDelete}
+            >
+              {busy
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : "Supprimer définitivement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
