@@ -485,8 +485,8 @@ function RowActions({
   const runGenerateToken = useServerFn(opGenerateReviewToken);
   const runSendEmail = useServerFn(opSendReviewEmail);
   const STORAGE_KEY = `review_link_copied_${r.id}`;
-  const firstCopiedAt = localStorage.getItem(STORAGE_KEY);
-  const linkExpired = firstCopiedAt ? Date.now() - Number(firstCopiedAt) > 10 * 60 * 60 * 1000 : false;
+  const firstCopiedAt = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+  const linkExpired = firstCopiedAt ? Date.now() - Number(firstCopiedAt) > 12 * 60 * 60 * 1000 : false;
 
   const [reviewUrl, setReviewUrl] = useState<string | null>(null);
   const [genBusy, setGenBusy] = useState(false);
@@ -536,7 +536,7 @@ function RowActions({
   };
 
   if (r.displayStatus === "logé" && linkExpired) {
-    return <Lock className="h-4 w-4 text-muted-foreground/40" />;
+    return null;
   }
 
   if (r.displayStatus === "logé") {
@@ -565,15 +565,6 @@ function RowActions({
             <Button size="sm" variant="outline" onClick={copyLink} title="Copier le lien">
               <Copy className="h-3.5 w-3.5" />
               {copied ? "Copié !" : "Copier"}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-green-700 border-green-400 hover:bg-green-50"
-              onClick={sendWhatsApp}
-              title="Envoyer via WhatsApp"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
             </Button>
             {r.email && (
               <Button
