@@ -195,8 +195,11 @@ export function DashboardOverview() {
       if (seen.has(r.id)) return false;
       seen.add(r.id);
       if (dismissed.has(r.id)) return false;
+      if (r.status === "annulée") return false;
       const arrMs = dateTimeMsCam(r.arrival, r.arrivalTime, "14:00");
-      return arrMs >= nowMs && arrMs <= in30h && r.status !== "annulée";
+      // Afficher si l'arrivée est dans les 30h (passée ou à venir)
+      // On ne retire la carte QUE si l'utilisateur clique "C'est compris"
+      return arrMs <= in30h;
     });
   }, [dash, nowMs, dismissed]);
 
