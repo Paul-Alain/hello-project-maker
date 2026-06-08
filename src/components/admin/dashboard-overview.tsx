@@ -461,6 +461,21 @@ export function DashboardOverview() {
 }
 
 // ── Sous-composants ───────────────────────────────────────────────────────
+function ClientsMonthCard({ label, count }: { label: string; count: number }) {
+  return (
+    <div
+      className="rounded-2xl bg-amber-800 p-5 text-white"
+      style={{ boxShadow: "4px 4px 0 0 #000, 6px 6px 0 0 rgba(0,0,0,0.3)", border: "3px solid #000" }}
+    >
+      <p className="text-sm font-semibold opacity-90">{label}</p>
+      <p className="mt-3 font-display text-4xl font-bold tabular-nums leading-none">{count}</p>
+      <p className="mt-2 text-xs opacity-80">
+        client{count > 1 ? "s" : ""} logé{count > 1 ? "s" : ""} ou confirmé{count > 1 ? "s" : ""} ce mois-ci
+      </p>
+    </div>
+  );
+}
+
 function OccupancyCard({
   label,
   occupied,
