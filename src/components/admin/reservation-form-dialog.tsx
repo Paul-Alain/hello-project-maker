@@ -115,6 +115,17 @@ export function ReservationFormDialog({
     return displayReservationStatus(reservation.status ?? "nouvelle", arrMs, depMs);
   }, [reservation]);
 
+  // Solde restant sur la réservation actuelle (avant ajout d'avance dans le formulaire)
+  const currentBalance = useMemo(() => {
+    if (!reservation) return 0;
+    return Math.max(0, (reservation.total_amount ?? 0) - (reservation.advance ?? 0));
+  }, [reservation]);
+
+  // Mode "logé avec solde > 0" : seul le champ "Ajouter une avance" est modifiable
+  const advanceOnlyMode = displayStatus === "logé" && currentBalance > 0;
+  // Logé avec solde = 0 → entièrement verrouillé (lecture seule)
+  const logeFullyLocked = displayStatus === "logé" && currentBalance <= 0;
+
   // Load default prices per type
   const { data: defaultPriceByType = {} } = useQuery({
     queryKey: ["logement-prices"],
