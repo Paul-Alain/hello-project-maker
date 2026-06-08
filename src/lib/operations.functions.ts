@@ -1535,20 +1535,24 @@ export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
     const nowMs = Date.now();
     const TYPES = ["chambre", "studio", "appartement"] as const;
     const typeLabels: Record<string, string> = { chambre: "Chambre", studio: "Studio", appartement: "Appartement" };
-    const STATUSES = ["all", "nouvelle", "confirmée", "encours", "terminée"] as const;
+    // Statuts alignés sur displayReservationStatus() : "nouvelle" | "confirmée" | "logé" | "annulée"
+    // "annulée" est inclus ici pour que le filtre "annulées" du dashboard fonctionne
+    const STATUSES = ["all", "nouvelle", "confirmée", "logé", "annulée"] as const;
     const rows = reservations
-      .filter((r) => r.status !== BLOCK_STATUS && r.status !== "annulée" && inRange(r.arrival_date))
+      .filter((r) => r.status !== BLOCK_STATUS && inRange(r.arrival_date))
       .map((r) => {
         const total = effectiveTotal(r, priceOf(r));
         const advance = Math.min(Number(r.advance_amount) || 0, total);
+        // Utiliser le fuseau Cameroun (UTC+1) pour cohérence avec reservations-admin
         const arrivalMs = new Date(
-          `${r.arrival_date}T${(r.arrival_time ?? DEFAULT_CHECKIN_TIME).slice(0, 5)}:00`,
+          `${r.arrival_date}T${(r.arrival_time ?? DEFAULT_CHECKIN_TIME).slice(0, 5)}:00+01:00`,
         ).getTime();
         const departureMs = new Date(
-          `${r.departure_date}T${(r.departure_time ?? DEFAULT_CHECKOUT_TIME).slice(0, 5)}:00`,
+          `${r.departure_date}T${(r.departure_time ?? DEFAULT_CHECKOUT_TIME).slice(0, 5)}:00+01:00`,
         ).getTime();
         return {
           type: r.logement_type ?? "",
+          // displayReservationStatus retourne exactement : nouvelle | confirmée | logé | annulée
           status: displayReservationStatus(r.status, arrivalMs, departureMs, nowMs) as string,
           total,
           collected: advance,
