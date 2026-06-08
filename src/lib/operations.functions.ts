@@ -73,7 +73,6 @@ function todayLocalIso(): string {
 
 function dateTimeMs(date: string, time: string | null | undefined, fallback: string): number {
   const t = (time ?? fallback).slice(0, 5);
-  // Parse as Cameroun local time (UTC+1)
   return new Date(`${date}T${t}:00+01:00`).getTime();
 }
 
@@ -169,7 +168,6 @@ export const opListReservations = createServerFn({ method: "GET" })
     const nowMs = Date.now();
     const todayIso = todayLocalIso();
 
-    // Build a map: type → first available unit id (for unassigned reservations)
     const firstUnitByType = new Map<string, string>();
     for (const u of units) {
       if (!firstUnitByType.has(u.type)) firstUnitByType.set(u.type, u.id);
@@ -190,7 +188,6 @@ export const opListReservations = createServerFn({ method: "GET" })
         const arrivalMs = dateTimeMs(r.arrival_date, r.arrival_time, DEFAULT_CHECKIN_TIME);
         const departureMs = dateTimeMs(r.departure_date, r.departure_time, DEFAULT_CHECKOUT_TIME);
         const dbStatus = r.status ?? "nouvelle";
-        // Auto-assign unit for calendar display if not assigned
         const effectiveUnitId =
           r.logement_unit_id ?? (r.logement_type ? (firstUnitByType.get(r.logement_type) ?? null) : null);
         return {
@@ -217,7 +214,6 @@ export const opListReservations = createServerFn({ method: "GET" })
           advance,
           paid,
           balance: Math.max(0, total - advance),
-          // Active = not cancelled AND departure date not yet passed
           active: r.status !== "annulée" && r.departure_date >= todayIso,
           notes: r.notes,
           message: r.notes,
@@ -227,11 +223,7 @@ export const opListReservations = createServerFn({ method: "GET" })
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
   });
 
-// ── Occupancy calendar (read-only operational view) ──────────────────────
-// Returns every physical unit plus all reservations (any status, incl.
-// historical & cancelled) enriched with payment figures so the calendar can
-// render occupancy blocks, conflict detection and a read-only detail panel
-// without any further round-trips. Strictly read — no mutations here.
+// ── Occupancy calendar ──────────────────────────────────────────────────
 export const opGetCalendar = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -267,7 +259,6 @@ export const opGetCalendar = createServerFn({ method: "GET" })
       const total = Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
       const advance = Number.isFinite(rawAdvance) && rawAdvance >= 0 ? rawAdvance : 0;
       const paid = paidMap.get(r.id) ?? 0;
-      // Auto-assign unit for calendar display if not assigned
       const effectiveUnitId =
         r.logement_unit_id ?? (r.logement_type ? (firstUnitByType.get(r.logement_type) ?? null) : null);
       return {
@@ -324,7 +315,6 @@ export const opGetDashboard = createServerFn({ method: "GET" })
       (r.logement_type ? priceByType.get(r.logement_type) : undefined) ??
       0;
 
-    // group reservations by unit (active only, exclude cancelled/finished)
     const byUnit = new Map<string, ResRow[]>();
     for (const r of reservations) {
       if (!r.logement_unit_id) continue;
@@ -333,7 +323,6 @@ export const opGetDashboard = createServerFn({ method: "GET" })
       byUnit.set(r.logement_unit_id, arr);
     }
 
-    // Unit state cards
     const unitCards = units.map((u) => {
       const bookings = (byUnit.get(u.id) ?? []).map((b) => ({
         arrival_date: b.arrival_date,
@@ -341,7 +330,6 @@ export const opGetDashboard = createServerFn({ method: "GET" })
         status: b.status,
       }));
       const status = computeUnitStatus(u.op_status, bookings, today);
-      // current or next guest
       const sorted = (byUnit.get(u.id) ?? [])
         .filter((b) => b.status !== "annulée" && b.status !== "terminée" && b.status !== BLOCK_STATUS)
         .sort((a, b) => a.arrival_date.localeCompare(b.arrival_date));
@@ -363,12 +351,10 @@ export const opGetDashboard = createServerFn({ method: "GET" })
       };
     });
 
-    // Occupancy today
     const occupiedToday = unitCards.filter((c) => c.status === "occupee" || c.status === "depart").length;
     const totalUnits = units.length;
     const availableNow = unitCards.filter((c) => c.status === "libre" || c.status === "arrivee").length;
 
-    // Arrivals / departures today
     const fmtRes = (r: ResRow) => {
       const total = effectiveTotal(r, priceOf(r));
       const paid = paidMap.get(r.id) ?? 0;
@@ -404,7 +390,6 @@ export const opGetDashboard = createServerFn({ method: "GET" })
       .filter((r) => r.departure_date === today && r.status !== "annulée" && r.status !== BLOCK_STATUS)
       .map(fmtRes);
 
-    // KPIs
     const pendingRequests = reservations.filter((r) => r.status === "nouvelle").length;
     const newMessages = (msgRes.data ?? []).filter((m: any) => m.status !== "répondu" && m.status !== "traité").length;
     const paymentsToVerify = reservations.filter((r) => {
@@ -419,7 +404,6 @@ export const opGetDashboard = createServerFn({ method: "GET" })
       .filter((p: any) => (p.created_at ?? "").slice(0, 7) === monthPrefix)
       .reduce((s: number, p: any) => s + Number(p.amount), 0);
 
-    // Urgent actions
     type Urgent = {
       id: string;
       level: "haute" | "moyenne" | "basse";
@@ -430,7 +414,6 @@ export const opGetDashboard = createServerFn({ method: "GET" })
     };
     const urgent: Urgent[] = [];
 
-    // Conflicts: >1 active booking overlapping on a unit
     for (const u of units) {
       const active = (byUnit.get(u.id) ?? []).filter((b) => ["confirmée", "checkin"].includes(b.status));
       for (let i = 0; i < active.length; i++) {
@@ -492,7 +475,6 @@ export const opGetDashboard = createServerFn({ method: "GET" })
       });
     }
 
-    // Per-type availability (Chambre / Studio / Appartement)
     const typeAvailability = (["chambre", "studio", "appartement"] as const).map((type) => {
       const cards = unitCards.filter((c) => c.type === type);
       const available = cards.filter((c) => c.status === "libre" || c.status === "arrivee").length;
@@ -502,7 +484,6 @@ export const opGetDashboard = createServerFn({ method: "GET" })
       return { type, available, total, level };
     });
 
-    // Upcoming windows (next 24h) by datetime
     const nowMs = Date.now();
     const in24h = nowMs + 24 * 60 * 60 * 1000;
     const toMs = (d: string, t: string | null | undefined, fallback: string) =>
@@ -568,7 +549,6 @@ export const opSetReservationStatus = createServerFn({ method: "POST" })
       .single();
     if (e0) throw new Error(e0.message);
 
-    // Check if departure has passed → reservation is "logé" → LOCKED
     const departureMs = dateTimeMs(row.departure_date, row.departure_time, DEFAULT_CHECKOUT_TIME);
     const nowMs = nowCameroun();
 
@@ -579,22 +559,23 @@ export const opSetReservationStatus = createServerFn({ method: "POST" })
       throw new Error("Cette réservation est annulée — aucune modification possible.");
     }
 
-    // Cancellation only allowed before departure
     if (data.status === "annulée" && nowMs > departureMs) {
       throw new Error("Impossible d'annuler : la date de départ est déjà dépassée.");
     }
 
-    // Conflict check when confirming with a physical unit assigned
     if (data.status === "confirmée" && row.logement_unit_id) {
       await ensureNoConflict(sb, row.logement_unit_id, row.arrival_date, row.departure_date, data.id);
     }
 
     const patch: Record<string, unknown> = { status: data.status };
 
-    // Quand annulée → montants à 0
+    // Annulation → montants à 0 ET suppression de tous les paiements liés
     if (data.status === "annulée") {
       patch.total_amount = 0;
       patch.advance_amount = 0;
+      patch.payment_status = "non_paye";
+      // Supprimer tous les paiements enregistrés pour cette réservation
+      await sb.from("payments").delete().eq("reservation_id", data.id);
     }
 
     const { error } = await sb.from("reservations").update(patch).eq("id", data.id);
@@ -679,7 +660,6 @@ export const opCheckOut = createServerFn({ method: "POST" })
       .update({ status: "terminée", checkout_at: new Date().toISOString() })
       .eq("id", data.id);
     if (e2) throw new Error(e2.message);
-    // Mark unit for cleaning after checkout.
     if (row.logement_unit_id) {
       await sb.from("logement_units").update({ op_status: "nettoyage" }).eq("id", row.logement_unit_id);
     }
@@ -791,7 +771,6 @@ export const opAddPayment = createServerFn({ method: "POST" })
 
     const totals = await recomputePaymentStatus(sb, data.reservationId);
 
-    // Notify the client (best-effort).
     const { data: r } = await sb.from("reservations").select("name, email").eq("id", data.reservationId).single();
     if (r?.email) {
       try {
@@ -940,7 +919,7 @@ export const opGetReservationDetail = createServerFn({ method: "GET" })
     };
   });
 
-// ── Manager-created reservation (mirrors the public site form) ────────────
+// ── Manager-created reservation ────────────────────────────────────────
 const LOGEMENT_TYPE = z.enum(["chambre", "studio", "appartement"]);
 
 const reservationFormBase = z.object({
@@ -961,7 +940,6 @@ const reservationFormBase = z.object({
   channel: z.enum(["website", "whatsapp", "phone", "walkin"]).default("walkin"),
   guests: z.number().int().min(1).max(20),
   advance: z.number().min(0).max(100_000_000).default(0),
-  // Optional custom total set by gestionnaire (price negotiation)
   totalAmount: z.number().min(0).max(100_000_000).optional(),
   notes: z.string().max(1000).optional(),
 });
@@ -987,32 +965,16 @@ const amountsValid = (v: { advance?: number; totalAmount?: number }) => {
 };
 
 const reservationFormSchema = reservationFormBase
-  .refine(departureAfterArrival, {
-    message: "La date/heure de départ doit suivre l'arrivée.",
-  })
-  .refine(guestsWithinCapacity, {
-    message: "Le nombre de personnes dépasse la capacité maximale de ce logement.",
-  })
-  .refine(amountsValid, {
-    message: "Les montants ne peuvent pas être négatifs.",
-  });
+  .refine(departureAfterArrival, { message: "La date/heure de départ doit suivre l'arrivée." })
+  .refine(guestsWithinCapacity, { message: "Le nombre de personnes dépasse la capacité maximale de ce logement." })
+  .refine(amountsValid, { message: "Les montants ne peuvent pas être négatifs." });
 
 const reservationUpdateSchema = reservationFormBase
   .extend({ id: UUID })
-  .refine(departureAfterArrival, {
-    message: "La date/heure de départ doit suivre l'arrivée.",
-  })
-  .refine(guestsWithinCapacity, {
-    message: "Le nombre de personnes dépasse la capacité maximale de ce logement.",
-  })
-  .refine(amountsValid, {
-    message: "Les montants ne peuvent pas être négatifs.",
-  });
+  .refine(departureAfterArrival, { message: "La date/heure de départ doit suivre l'arrivée." })
+  .refine(guestsWithinCapacity, { message: "Le nombre de personnes dépasse la capacité maximale de ce logement." })
+  .refine(amountsValid, { message: "Les montants ne peuvent pas être négatifs." });
 
-/**
- * Pick the first available unit of a given accommodation type that has no
- * booking conflict over the requested period. Returns null if none is free.
- */
 async function pickFreeUnit(
   sb: any,
   logementType: string,
@@ -1049,11 +1011,7 @@ export const opCreateReservation = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
-
-    // Auto-assign a free unit of the chosen type so the booking is visible on
-    // the occupancy calendar (which is organised by unit).
     const unitId = await pickFreeUnit(sb, data.logementType, data.arrival, data.departure);
-
     const { data: inserted, error } = await sb
       .from("reservations")
       .insert({
@@ -1076,7 +1034,6 @@ export const opCreateReservation = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-
     const name = await actorName(sb, context.userId);
     await logActivity(sb, {
       userId: context.userId,
@@ -1089,31 +1046,24 @@ export const opCreateReservation = createServerFn({ method: "POST" })
     return { ok: true, id: inserted.id };
   });
 
-// ── Manager edit of an existing reservation ──────────────────────────────
 export const opUpdateReservation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => reservationUpdateSchema.parse(input))
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
-
-    // Keep the unit assignment coherent with the (possibly changed) type so the
-    // booking stays visible on the occupancy calendar.
     const { data: existing } = await sb
       .from("reservations")
       .select("logement_unit_id, logement_type")
       .eq("id", data.id)
       .single();
-
     const unitRow = existing?.logement_unit_id
       ? (await loadUnits(sb)).find((u) => u.id === existing.logement_unit_id)
       : undefined;
     const needsUnit = !existing?.logement_unit_id || (unitRow && unitRow.type !== data.logementType);
-
     const newUnitId = needsUnit
       ? await pickFreeUnit(sb, data.logementType, data.arrival, data.departure, data.id)
       : (existing?.logement_unit_id ?? null);
-
     const { error } = await sb
       .from("reservations")
       .update({
@@ -1134,7 +1084,6 @@ export const opUpdateReservation = createServerFn({ method: "POST" })
       })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
-
     const name = await actorName(sb, context.userId);
     await logActivity(sb, {
       userId: context.userId,
@@ -1169,17 +1118,42 @@ export const opAssignUnit = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ── Clients (merge duplicates) ───────────────────────────────────────────
+// ── Dismiss urgent action (permanent, stored in DB) ───────────────────────
+export const opDismissUrgent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ urgentId: z.string().min(1).max(200) }).parse(input))
+  .handler(async ({ context, data }) => {
+    await assertStaff(context.supabase, context.userId);
+    const sb = context.supabase;
+    // Upsert dans une table dédiée — ignoré si déjà présent
+    const { error } = await sb
+      .from("dismissed_urgents")
+      .upsert(
+        { urgent_id: data.urgentId, dismissed_by: context.userId, dismissed_at: new Date().toISOString() },
+        { onConflict: "urgent_id", ignoreDuplicates: true },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const opListDismissedUrgents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const { data, error } = await context.supabase.from("dismissed_urgents").select("urgent_id");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => r.urgent_id as string);
+  });
+
+// ── Clients ──────────────────────────────────────────────────────────────
 export const opListClients = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
     const [resv, paidMap] = await Promise.all([loadReservations(sb), loadPaymentsMap(sb)]);
-
     const norm = (s: string | null) => (s ?? "").trim().toLowerCase();
     const nowMs = Date.now();
-
     const clients = new Map<
       string,
       {
@@ -1192,22 +1166,16 @@ export const opListClients = createServerFn({ method: "GET" })
         totalSpent: number;
       }
     >();
-
     for (const r of resv) {
       if (r.status === BLOCK_STATUS || r.status === "annulée") continue;
       const name = (r.name ?? "").trim();
       if (!name) continue;
-
-      // Un client est "ayant séjourné" si son statut est confirmée
-      // ET sa date/heure de départ est dépassée (= logé)
       const depMs = new Date(
         `${r.departure_date}T${(r.departure_time ?? DEFAULT_CHECKOUT_TIME).slice(0, 5)}:00`,
       ).getTime();
       const isLoge = r.status === "confirmée" && depMs <= nowMs;
-      // Aussi accepter les anciens statuts legacy (checkin, terminée)
       const isLegacy = r.status === "checkin" || r.status === "terminée";
       if (!isLoge && !isLegacy) continue;
-
       const key = norm(r.email) || norm(r.phone) || norm(name);
       const paid = paidMap.get(r.id) ?? 0;
       const existing = clients.get(key);
@@ -1239,14 +1207,12 @@ export const opGetClientDetail = createServerFn({ method: "GET" })
     const sb = context.supabase;
     const norm = (s: string | null) => (s ?? "").trim().toLowerCase();
     const [resv, paidMap] = await Promise.all([loadReservations(sb), loadPaymentsMap(sb)]);
-
     const matches = resv.filter((r) => {
       if (r.status === BLOCK_STATUS) return false;
       const key = norm(r.email) || norm(r.phone) || norm(r.name);
       return key === data.key;
     });
     const ids = matches.map((m) => m.id);
-
     const [{ data: pays }, { data: msgs }] = await Promise.all([
       ids.length
         ? sb.from("payments").select("id, reservation_id, amount, method, created_at").in("reservation_id", ids)
@@ -1256,20 +1222,14 @@ export const opGetClientDetail = createServerFn({ method: "GET" })
         .select("id, name, phone, email, message, status, created_at")
         .order("created_at", { ascending: false }),
     ]);
-
     const first = matches[0];
     const phone = norm(first?.phone);
     const email = norm(first?.email);
     const clientMsgs = (msgs ?? []).filter(
       (m: any) => (email && norm(m.email) === email) || (phone && norm(m.phone) === phone),
     );
-
     return {
-      profile: {
-        name: first?.name ?? "—",
-        phone: first?.phone ?? "—",
-        email: first?.email ?? null,
-      },
+      profile: { name: first?.name ?? "—", phone: first?.phone ?? "—", email: first?.email ?? null },
       reservations: matches
         .map((r) => ({
           id: r.id,
@@ -1295,17 +1255,14 @@ export const opListTeam = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     await assertStaff(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const { data: roleRows, error } = await supabaseAdmin.from("user_roles").select("user_id, role");
     if (error) throw new Error(error.message);
-
     const byUser = new Map<string, string[]>();
     for (const r of roleRows ?? []) {
       const arr = byUser.get(r.user_id) ?? [];
       arr.push(r.role as string);
       byUser.set(r.user_id, arr);
     }
-
     const authMap = new Map<string, { email: string | null; lastSignIn: string | null }>();
     for (let page = 1; ; page++) {
       const { data: list, error: e } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
@@ -1313,14 +1270,12 @@ export const opListTeam = createServerFn({ method: "GET" })
       for (const u of list.users) authMap.set(u.id, { email: u.email ?? null, lastSignIn: u.last_sign_in_at ?? null });
       if (list.users.length < 1000) break;
     }
-
     const ids = Array.from(byUser.keys());
     const nameMap = new Map<string, string | null>();
     if (ids.length) {
       const { data: profs } = await supabaseAdmin.from("profiles").select("id, full_name").in("id", ids);
       for (const p of profs ?? []) nameMap.set(p.id, p.full_name as string | null);
     }
-
     return ids.map((id) => ({
       id,
       name: nameMap.get(id) ?? null,
@@ -1334,22 +1289,15 @@ export const opSetTeamRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
     z
-      .object({
-        // Accept email, phone, or name — we'll try to match
-        identifier: z.string().trim().min(1).max(160),
-        role: z.enum(["proprietaire", "gestionnaire"]),
-      })
+      .object({ identifier: z.string().trim().min(1).max(160), role: z.enum(["proprietaire", "gestionnaire"]) })
       .parse(input),
   )
   .handler(async ({ context, data }) => {
     await assertCanManageTeam(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    // Resolve user by email, phone or name (flexible match)
     let targetId: string | null = null;
     let targetEmail: string | null = null;
     const id = data.identifier.toLowerCase().trim();
-
     for (let page = 1; ; page++) {
       const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
       if (error) throw new Error(error.message);
@@ -1372,15 +1320,12 @@ export const opSetTeamRole = createServerFn({ method: "POST" })
     }
     if (!targetId)
       throw new Error(
-        `Aucun compte ne correspond à "${data.identifier}". ` +
-          `Vérifiez que le membre a bien créé un compte sur le site.`,
+        `Aucun compte ne correspond à "${data.identifier}". Vérifiez que le membre a bien créé un compte sur le site.`,
       );
-
     const { error } = await supabaseAdmin
       .from("user_roles")
       .upsert({ user_id: targetId, role: data.role as any }, { onConflict: "user_id,role", ignoreDuplicates: true });
     if (error) throw new Error(error.message);
-
     const name = await actorName(context.supabase, context.userId);
     await logActivity(context.supabase, {
       userId: context.userId,
@@ -1393,33 +1338,25 @@ export const opSetTeamRole = createServerFn({ method: "POST" })
     return { ok: true, targetEmail };
   });
 
-// Replace gestionnaire: remove all existing gestionnaire roles then assign new one
 export const opReplaceManager = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ identifier: z.string().trim().min(1).max(160) }).parse(input))
   .handler(async ({ context, data }) => {
     await assertCanManageTeam(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    // Resolve new manager — search by email, phone or name (flexible match)
     let targetId: string | null = null;
     let targetEmail: string | null = null;
     const id = data.identifier.toLowerCase().trim();
-
     for (let page = 1; ; page++) {
       const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
       if (error) throw new Error(error.message);
       const found = list.users.find((u) => {
-        // Match by email (exact)
         if ((u.email ?? "").toLowerCase() === id) return true;
-        // Match by phone (digits only)
         if (id.replace(/\D/g, "").length >= 6 && (u.phone ?? "").replace(/\D/g, "") === id.replace(/\D/g, ""))
           return true;
-        // Match by full_name in any metadata field
         const meta = u.user_metadata ?? u.raw_user_meta_data ?? {};
         const fullName = (meta.full_name ?? meta.name ?? meta.display_name ?? "").toLowerCase().trim();
         if (fullName && fullName === id) return true;
-        // Partial name match (contains)
         if (fullName && fullName.includes(id)) return true;
         return false;
       });
@@ -1430,21 +1367,12 @@ export const opReplaceManager = createServerFn({ method: "POST" })
       }
       if (list.users.length < 1000) break;
     }
-    if (!targetId)
-      throw new Error(
-        `Aucun compte ne correspond à "${data.identifier}". ` +
-          `Vérifiez que le membre a bien créé un compte sur le site avec cet email, téléphone ou nom.`,
-      );
-
-    // Remove all existing gestionnaire roles
+    if (!targetId) throw new Error(`Aucun compte ne correspond à "${data.identifier}".`);
     await supabaseAdmin.from("user_roles").delete().eq("role", "gestionnaire");
-
-    // Assign new gestionnaire
     const { error } = await supabaseAdmin
       .from("user_roles")
       .upsert({ user_id: targetId, role: "gestionnaire" }, { onConflict: "user_id,role", ignoreDuplicates: true });
     if (error) throw new Error(error.message);
-
     const name = await actorName(context.supabase, context.userId);
     await logActivity(context.supabase, {
       userId: context.userId,
@@ -1548,7 +1476,6 @@ export const opGetAnalytics = createServerFn({ method: "GET" })
       loadReservations(sb),
       sb.from("payments").select("amount, created_at, reservation_id"),
     ]);
-
     const unitById = new Map(units.map((u) => [u.id, u]));
     const priceByType = new Map<string, number>();
     for (const u of units) if (!priceByType.has(u.type)) priceByType.set(u.type, u.price);
@@ -1556,42 +1483,27 @@ export const opGetAnalytics = createServerFn({ method: "GET" })
       (r.logement_unit_id ? unitById.get(r.logement_unit_id)?.price : undefined) ??
       (r.logement_type ? priceByType.get(r.logement_type) : undefined) ??
       0;
-
     const inRange = (d: string) => d >= data.start && d <= data.end;
     const todayIso = todayLocalIso();
-
-    // Reservations whose arrival falls in the selected period (exclude cancelled/blocks).
     const periodRes = reservations.filter(
       (r) => r.status !== BLOCK_STATUS && r.status !== "annulée" && inRange(r.arrival_date),
     );
-
     const TYPES = ["chambre", "studio", "appartement"] as const;
-    const typeLabels: Record<string, string> = {
-      chambre: "Chambre",
-      studio: "Studio",
-      appartement: "Appartement",
-    };
+    const typeLabels: Record<string, string> = { chambre: "Chambre", studio: "Studio", appartement: "Appartement" };
     const revenueByType = TYPES.map((type) => {
       const rows = periodRes.filter((r) => r.logement_type === type);
       const expected = rows.reduce((s, r) => s + effectiveTotal(r, priceOf(r)), 0);
       return { type, label: typeLabels[type], expected, count: rows.length };
     });
-
     const expectedRevenue = periodRes.reduce((s, r) => s + effectiveTotal(r, priceOf(r)), 0);
-
-    // Collected = payments recorded within the period.
     const collectedRevenue = (payRows.data ?? [])
       .filter((p: any) => inRange((p.created_at ?? "").slice(0, 10)))
       .reduce((s: number, p: any) => s + Number(p.amount), 0);
-
-    // Projected = expected totals of upcoming (future arrival) reservations in period.
     const projectedRevenue = periodRes
       .filter((r) => r.arrival_date >= todayIso && r.status !== "terminée")
       .reduce((s, r) => s + effectiveTotal(r, priceOf(r)), 0);
-
     const completedStays = periodRes.filter((r) => r.status === "terminée").length;
     const upcomingStays = periodRes.filter((r) => r.arrival_date >= todayIso && r.status !== "terminée").length;
-
     return {
       start: data.start,
       end: data.end,
@@ -1605,13 +1517,6 @@ export const opGetAnalytics = createServerFn({ method: "GET" })
     };
   });
 
-// ── Revenue analytics by logement type (dashboard chart) ─────────────────
-// Aggregates the reservation history over a selectable period, grouped by
-// logement type and by reservation status. For each (type, status) bucket we
-// expose the contracted revenue (chiffre d'affaires), the collected amount
-// (avances encaissées) and the remaining balance (solde restant). The status
-// reflects what managers see in the Reservations table (clock-driven), so the
-// "terminée" filter matches finished stays.
 export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ start: DATE, end: DATE }).parse(input))
@@ -1619,7 +1524,6 @@ export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
     const [units, reservations] = await Promise.all([loadUnits(sb), loadReservations(sb)]);
-
     const unitById = new Map(units.map((u) => [u.id, u]));
     const priceByType = new Map<string, number>();
     for (const u of units) if (!priceByType.has(u.type)) priceByType.set(u.type, u.price);
@@ -1627,20 +1531,11 @@ export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
       (r.logement_unit_id ? unitById.get(r.logement_unit_id)?.price : undefined) ??
       (r.logement_type ? priceByType.get(r.logement_type) : undefined) ??
       0;
-
     const inRange = (d: string) => d >= data.start && d <= data.end;
     const nowMs = Date.now();
-
     const TYPES = ["chambre", "studio", "appartement"] as const;
-    const typeLabels: Record<string, string> = {
-      chambre: "Chambre",
-      studio: "Studio",
-      appartement: "Appartement",
-    };
-    // Status keys exposed to the filter ("all" = every status except cancelled).
+    const typeLabels: Record<string, string> = { chambre: "Chambre", studio: "Studio", appartement: "Appartement" };
     const STATUSES = ["all", "nouvelle", "confirmée", "encours", "terminée"] as const;
-
-    // Enrich each in-range reservation with its display status + money figures.
     const rows = reservations
       .filter((r) => r.status !== BLOCK_STATUS && r.status !== "annulée" && inRange(r.arrival_date))
       .map((r) => {
@@ -1660,8 +1555,6 @@ export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
           balance: Math.max(0, total - advance),
         };
       });
-
-    // Build per-status → per-type aggregation.
     const byStatus: Record<
       string,
       { type: string; label: string; total: number; collected: number; balance: number; count: number }[]
@@ -1679,6 +1572,5 @@ export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
         };
       });
     }
-
     return { start: data.start, end: data.end, byStatus };
   });
