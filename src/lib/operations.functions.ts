@@ -1029,7 +1029,15 @@ export const opCreateReservation = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
-    const unitId = await pickFreeUnit(sb, data.logementType, data.arrival, data.departure);
+    const unitId = await pickFreeUnit(
+      sb,
+      data.logementType,
+      data.arrival,
+      data.departure,
+      undefined,
+      data.arrivalTime ?? DEFAULT_CHECKIN_TIME,
+      data.departureTime ?? DEFAULT_CHECKOUT_TIME,
+    );
     const { data: inserted, error } = await sb
       .from("reservations")
       .insert({
@@ -1080,7 +1088,15 @@ export const opUpdateReservation = createServerFn({ method: "POST" })
       : undefined;
     const needsUnit = !existing?.logement_unit_id || (unitRow && unitRow.type !== data.logementType);
     const newUnitId = needsUnit
-      ? await pickFreeUnit(sb, data.logementType, data.arrival, data.departure, data.id)
+      ? await pickFreeUnit(
+          sb,
+          data.logementType,
+          data.arrival,
+          data.departure,
+          data.id,
+          data.arrivalTime ?? DEFAULT_CHECKIN_TIME,
+          data.departureTime ?? DEFAULT_CHECKOUT_TIME,
+        )
       : (existing?.logement_unit_id ?? null);
     const { error } = await sb
       .from("reservations")
