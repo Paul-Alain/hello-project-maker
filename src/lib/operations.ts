@@ -68,7 +68,7 @@ export function displayReservationStatus(
  * when its display status is "logé" or "annulée".
  */
 export function isLocked(displayStatus: DisplayResStatus): boolean {
-  return displayStatus === "logé" || displayStatus === "annulée";
+  return displayStatus === "annulée"; // logé est toujours modifiable
 }
 
 /** Maximum guests allowed per accommodation type (shared by all forms). */
