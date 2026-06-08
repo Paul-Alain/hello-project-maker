@@ -18,7 +18,6 @@ import {
   Lock,
   Star,
   Copy,
-  MessageCircle,
   Mail,
   Eye,
 } from "lucide-react";
@@ -515,14 +514,6 @@ function RowActions({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success("Lien copié !");
-  };
-
-  const sendWhatsApp = () => {
-    if (!reviewUrl) return;
-    const msg = encodeURIComponent(
-      `Bonjour ${r.name},\n\nMerci pour votre séjour à la Résidence Panorama P ! Nous serions ravis d'avoir votre avis :\n${reviewUrl}\n\nMerci d'avance !`,
-    );
-    window.open(`https://wa.me/${r.phone.replace(/\D/g, "")}?text=${msg}`, "_blank");
   };
 
   const sendEmail = async () => {
