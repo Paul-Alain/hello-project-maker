@@ -41,10 +41,7 @@ import { staffGetStatus } from "@/lib/operations.functions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
-    meta: [
-      { title: "Administration – Panorama P" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Administration – Panorama P" }, { name: "robots", content: "noindex" }],
   }),
   component: AdminPage,
 });
@@ -167,20 +164,13 @@ function AdminPage() {
           <div className="mx-auto max-w-md rounded-3xl border border-border/60 bg-card p-8 text-center shadow-soft">
             <ShieldCheck className="mx-auto h-10 w-10 text-gold" />
 
-            <h1 className="mt-4 font-display text-2xl font-semibold">
-              Activer l'accès administrateur
-            </h1>
+            <h1 className="mt-4 font-display text-2xl font-semibold">Activer l'accès administrateur</h1>
 
             <p className="mt-2 text-sm text-muted-foreground">
               Vous êtes connecté en tant que <strong>{session.user.email}</strong>.
             </p>
 
-            <Button
-              variant="gold"
-              className="mt-6 w-full"
-              onClick={handleClaim}
-              disabled={claiming}
-            >
+            <Button variant="gold" className="mt-6 w-full" onClick={handleClaim} disabled={claiming}>
               {claiming && <Loader2 className="h-4 w-4 animate-spin" />}
               Activer
             </Button>
@@ -205,9 +195,7 @@ function AdminDashboard({ roles }: { roles: string[] }) {
     { value: "clients", label: "Clients", icon: Contact },
     { value: "messages", label: "Messages", icon: MessageSquare },
     { value: "reviews", label: "Avis", icon: Star },
-    ...(isOwner
-      ? [{ value: "team", label: "Administration", icon: UsersRound }]
-      : []),
+    ...(isOwner ? [{ value: "team", label: "Administration", icon: UsersRound }] : []),
   ];
 
   return (
