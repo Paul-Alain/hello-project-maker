@@ -181,8 +181,11 @@ export const opListReservations = createServerFn({ method: "GET" })
         const autoTotal = billableUnits * unitPrice;
         const rawTotal = Number(r.total_amount);
         const rawAdvance = Number(r.advance_amount);
-        const total = Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
-        const advance = Number.isFinite(rawAdvance) && rawAdvance >= 0 ? rawAdvance : 0;
+        // Pour les réservations annulées, respecter les montants en base (0)
+        // Pour les autres, recalculer si total non défini
+        const isAnnulee = r.status === "annulée";
+        const total = isAnnulee ? rawTotal : Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
+        const advance = isAnnulee ? 0 : Number.isFinite(rawAdvance) && rawAdvance >= 0 ? rawAdvance : 0;
         const paid = paidMap.get(r.id) ?? 0;
         const nowMs = nowCameroun();
         const arrivalMs = dateTimeMs(r.arrival_date, r.arrival_time, DEFAULT_CHECKIN_TIME);
@@ -256,8 +259,9 @@ export const opGetCalendar = createServerFn({ method: "GET" })
       const rawTotal = Number(r.total_amount);
       const rawAdvance = Number(r.advance_amount);
       const autoTotal = effectiveTotal(r, priceOf(r));
-      const total = Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
-      const advance = Number.isFinite(rawAdvance) && rawAdvance >= 0 ? rawAdvance : 0;
+      const isAnnulee = r.status === "annulée";
+      const total = isAnnulee ? rawTotal : Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
+      const advance = isAnnulee ? 0 : Number.isFinite(rawAdvance) && rawAdvance >= 0 ? rawAdvance : 0;
       const paid = paidMap.get(r.id) ?? 0;
       const effectiveUnitId =
         r.logement_unit_id ?? (r.logement_type ? (firstUnitByType.get(r.logement_type) ?? null) : null);
