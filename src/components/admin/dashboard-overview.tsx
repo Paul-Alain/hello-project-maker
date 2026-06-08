@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { opGetDashboard, opGetRevenueAnalytics } from "@/lib/operations.functions";
+import {
+  opGetDashboard,
+  opGetRevenueAnalytics,
+  opDismissUrgent,
+  opListDismissedUrgents,
+} from "@/lib/operations.functions";
 import { formatMoney, formatDateFr } from "@/lib/format";
 import { useResidence } from "@/lib/use-residence";
 import { nowCam, dateTimeMsCam, todayCam } from "@/lib/cameroun-time";
@@ -31,11 +36,10 @@ const TYPE_LABELS: Record<string, string> = {
   appartement: "Appartement",
 };
 
-const BAR_COLOR = "#1d4ed8"; // blue-700
+const BAR_COLOR = "#1d4ed8";
 
 // ── Date helpers ─────────────────────────────────────────────────────────
 function isoDay(d: Date): string {
-  // Convertit la date donnée en YYYY-MM-DD selon le fuseau Cameroun
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Douala",
     year: "numeric",
@@ -51,7 +55,6 @@ function monthRange(year: number, month: number) {
   return { start, end };
 }
 
-// ── Month/Year selectors ─────────────────────────────────────────────────
 const MONTHS = [
   "Janvier",
   "Février",
@@ -66,7 +69,7 @@ const MONTHS = [
   "Novembre",
   "Décembre",
 ];
-const YEARS = Array.from({ length: 41 }, (_, i) => 2020 + i); // 2020 → 2060
+const YEARS = Array.from({ length: 41 }, (_, i) => 2020 + i);
 
 // ── Main component ───────────────────────────────────────────────────────
 export function DashboardOverview() {
@@ -74,6 +77,8 @@ export function DashboardOverview() {
   const qc = useQueryClient();
   const runDash = useServerFn(opGetDashboard);
   const runRevenue = useServerFn(opGetRevenueAnalytics);
+  const runDismiss = useServerFn(opDismissUrgent);
+  const runListDismissed = useServerFn(opListDismissedUrgents);
   const money = (v: number) => formatMoney(v, residence.currency);
 
   const now = new Date(nowCam());
@@ -84,27 +89,28 @@ export function DashboardOverview() {
     queryKey: ["op-dashboard"],
     queryFn: () => runDash(),
     staleTime: 30_000,
-    refetchInterval: 60_000, // rafraîchissement automatique toutes les 60s
+    refetchInterval: 60_000,
     refetchOnWindowFocus: true,
   });
 
-  // ── Dismissed urgent IDs (persistés dans localStorage) ───────────────
-  const [dismissed, setDismissed] = useState<Set<string>>(() => {
-    try {
-      const saved = localStorage.getItem("pp-dismissed-urgent");
-      return saved ? new Set(JSON.parse(saved)) : new Set();
-    } catch {
-      return new Set();
-    }
+  // ── Dismissed urgent IDs (stockés en base Supabase) ──────────────────
+  const { data: dismissedList = [] } = useQuery({
+    queryKey: ["op-dismissed-urgents"],
+    queryFn: () => runListDismissed(),
+    staleTime: 60_000,
   });
-  const dismiss = (id: string) => {
-    setDismissed((s) => {
-      const next = new Set([...s, id]);
-      try {
-        localStorage.setItem("pp-dismissed-urgent", JSON.stringify([...next]));
-      } catch {}
-      return next;
-    });
+
+  const dismissed = useMemo(() => new Set(dismissedList), [dismissedList]);
+
+  const dismiss = async (id: string) => {
+    // Mise à jour optimiste immédiate
+    qc.setQueryData(["op-dismissed-urgents"], (prev: string[] = []) => [...prev, id]);
+    try {
+      await runDismiss({ data: { urgentId: id } });
+    } catch {
+      // En cas d'erreur, on recharge depuis la base
+      qc.invalidateQueries({ queryKey: ["op-dismissed-urgents"] });
+    }
   };
 
   // ── Chart filters ────────────────────────────────────────────────────
@@ -128,7 +134,7 @@ export function DashboardOverview() {
     refetchOnWindowFocus: false,
   });
 
-  // ── Compute occupancy from reservations ──────────────────────────────
+  // ── Compute occupancy ────────────────────────────────────────────────
   const occupancyByType = useMemo(() => {
     const cards = dash?.units ?? [];
     const byType: Record<string, { occupied: number; total: number }> = {
@@ -139,9 +145,7 @@ export function DashboardOverview() {
     for (const c of cards) {
       if (!byType[c.type]) continue;
       byType[c.type].total++;
-      if (c.status === "occupee" || c.status === "depart") {
-        byType[c.type].occupied++;
-      }
+      if (c.status === "occupee" || c.status === "depart") byType[c.type].occupied++;
     }
     return byType;
   }, [dash]);
@@ -155,9 +159,7 @@ export function DashboardOverview() {
 
   const rows = useMemo(() => {
     const base = rev?.byStatus?.[revStatusKey] ?? [];
-    if (statusFilter === "annulée") {
-      return base.map((r) => ({ ...r, total: 0, collected: 0, balance: 0, count: 0 }));
-    }
+    if (statusFilter === "annulée") return base.map((r) => ({ ...r, total: 0, collected: 0, balance: 0, count: 0 }));
     return base;
   }, [rev, revStatusKey, statusFilter]);
 
@@ -197,8 +199,6 @@ export function DashboardOverview() {
       if (dismissed.has(r.id)) return false;
       if (r.status === "annulée") return false;
       const arrMs = dateTimeMsCam(r.arrival, r.arrivalTime, "14:00");
-      // Afficher si l'arrivée est dans les 30h (passée ou à venir)
-      // On ne retire la carte QUE si l'utilisateur clique "C'est compris"
       return arrMs <= in30h;
     });
   }, [dash, nowMs, dismissed]);
@@ -224,13 +224,10 @@ export function DashboardOverview() {
         </div>
       </section>
 
-      {/* ── 2. GRAPHIQUE CHIFFRE D'AFFAIRES ── */}
+      {/* ── 2. GRAPHIQUE ── */}
       <section className="space-y-4">
         <h2 className="font-display text-lg font-bold">Analyse par type de logement</h2>
-
-        {/* Filters */}
         <div className="space-y-3 rounded-2xl border-2 border-black/10 bg-card p-4 shadow-md">
-          {/* Mode toggle */}
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -248,7 +245,6 @@ export function DashboardOverview() {
             </Button>
           </div>
 
-          {/* Period selectors */}
           {filterMode === "month-year" ? (
             <div className="flex flex-wrap gap-2">
               <Select value={String(selMonth)} onValueChange={(v) => setSelMonth(Number(v))}>
@@ -294,7 +290,6 @@ export function DashboardOverview() {
             </div>
           )}
 
-          {/* Status + Metric */}
           <div className="flex flex-wrap gap-2">
             <div className="flex flex-wrap gap-1">
               <span className="self-center text-xs font-medium text-muted-foreground">Statut :</span>
@@ -341,14 +336,11 @@ export function DashboardOverview() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Aggregate card */}
             <AggregateCard
               label={aggregate.label}
               value={metric === "count" ? String(aggregate.value) : money(aggregate.value)}
               sub={filterMode === "month-year" ? `${MONTHS[selMonth - 1]} ${selYear}` : `${customStart} → ${customEnd}`}
             />
-
-            {/* Bar chart */}
             <div className="rounded-2xl border-2 border-black/10 bg-card p-4 shadow-md">
               <p className="mb-1 font-display text-base font-semibold">
                 {
@@ -392,8 +384,6 @@ export function DashboardOverview() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-
-              {/* Detail per type */}
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {rows.map((r) => (
                   <div key={r.type} className="rounded-xl border-2 border-black/10 bg-secondary/40 p-3 shadow-sm">
@@ -412,7 +402,7 @@ export function DashboardOverview() {
         )}
       </section>
 
-      {/* ── 3. ACTIONS URGENTES — arrivées dans les 30h ── */}
+      {/* ── 3. ACTIONS URGENTES ── */}
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold">
           <AlertTriangle className="h-5 w-5 text-amber-500" />
@@ -467,7 +457,6 @@ export function DashboardOverview() {
 }
 
 // ── Sous-composants ───────────────────────────────────────────────────────
-
 function OccupancyCard({
   label,
   occupied,
@@ -483,10 +472,7 @@ function OccupancyCard({
   return (
     <div
       className="rounded-2xl bg-amber-800 p-5 text-white"
-      style={{
-        boxShadow: "4px 4px 0 0 #000, 6px 6px 0 0 rgba(0,0,0,0.3)",
-        border: "3px solid #000",
-      }}
+      style={{ boxShadow: "4px 4px 0 0 #000, 6px 6px 0 0 rgba(0,0,0,0.3)", border: "3px solid #000" }}
     >
       <p className="text-sm font-semibold opacity-90">{label}</p>
       <div className="mt-2 flex items-end justify-between">
@@ -510,10 +496,7 @@ function AggregateCard({ label, value, sub }: { label: string; value: string; su
   return (
     <div
       className="rounded-2xl bg-amber-800 p-5 text-white"
-      style={{
-        boxShadow: "5px 5px 0 0 #000, 8px 8px 0 0 rgba(0,0,0,0.25)",
-        border: "3px solid #000",
-      }}
+      style={{ boxShadow: "5px 5px 0 0 #000, 8px 8px 0 0 rgba(0,0,0,0.25)", border: "3px solid #000" }}
     >
       <p className="text-sm font-semibold opacity-80">{label}</p>
       <p className="mt-1 font-display text-3xl font-bold tabular-nums">{value}</p>
