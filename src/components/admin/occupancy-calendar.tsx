@@ -220,7 +220,7 @@ export function OccupancyCalendar({ readOnly = false }: { readOnly?: boolean }) 
             {visibleUnits.map((unit) => {
               const maint = unit.op_status === "maintenance" || unit.op_status === "bloquee";
 
-              // Only show non-cancelled reservations on calendar
+              // Afficher toutes les réservations y compris annulées (barre rouge)
               const bars = reservations
                 .filter((r) =>
                   r.logement_unit_id === unit.id &&
