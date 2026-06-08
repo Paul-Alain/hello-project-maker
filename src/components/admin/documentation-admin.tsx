@@ -231,11 +231,10 @@ export function DocumentationAdmin() {
                 </li>
                 <li>
                   <strong>Confirmées</strong> — réservations confirmées dont
-                  le client n'est pas encore arrivé. C'est le revenu à venir.
+                  la période de réservation n'est pas encore acquise. C'est le revenu à venir.
                 </li>
                 <li>
-                  <strong>Logé ✓</strong> — clients actuellement présents,
-                  séjour en cours.
+                  <strong>Logé ✓</strong> — réservations confirmées dont la période de réservation est acquise
                 </li>
                 <li>
                   <strong>Annulées</strong> — réservations annulées (montants
@@ -383,8 +382,7 @@ export function DocumentationAdmin() {
         <CardContent className="space-y-2 text-sm leading-relaxed">
           <ol className="list-decimal space-y-2 pl-5">
             <li>
-              Ouvrir le <strong>Tableau de bord</strong> — vérifier arrivées /
-              départs du jour.
+              Ouvrir le <strong>Tableau de bord</strong> pour prendre connaissance de l'activité à jour.
             </li>
             <li>
               Aller dans <strong>Réservations</strong> — traiter les
