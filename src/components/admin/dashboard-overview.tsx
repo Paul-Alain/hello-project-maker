@@ -27,7 +27,6 @@ const STATUS_OPTIONS: { value: StatusKey; label: string }[] = [
   { value: "all", label: "Tous (hors annulés)" },
   { value: "confirmée", label: "Confirmées" },
   { value: "logé", label: "Logé ✓" },
-  { value: "annulée", label: "Annulées" },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
