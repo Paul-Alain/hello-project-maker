@@ -7,39 +7,25 @@
 // ── Reservation lifecycle ────────────────────────────────────────────────
 // Statuses stored in DB: nouvelle, confirmée, annulée
 // "logé" is a DISPLAY-ONLY derived status (confirmée + departure passed)
-export type ResStatus =
-  | "nouvelle"
-  | "confirmée"
-  | "annulée"
-  | "checkin"
-  | "terminée";
+export type ResStatus = "nouvelle" | "confirmée" | "annulée" | "checkin" | "terminée";
 
 export const RES_STATUS_LABELS: Record<string, string> = {
-  nouvelle:  "En attente de confirmation",
+  nouvelle: "En attente de confirmation",
   confirmée: "Confirmée",
-  logé:      "Logé ✓",
-  annulée:   "Annulée",
+  logé: "Logé ✓",
+  annulée: "Annulée",
   // legacy labels kept for DB back-compat only
-  checkin:   "Logé ✓",
-  encours:   "Logé ✓",
-  terminée:  "Logé ✓",
-  bloqué:    "Bloqué",
+  checkin: "Logé ✓",
+  encours: "Logé ✓",
+  terminée: "Logé ✓",
+  bloqué: "Bloqué",
 };
 
 /** Display statuses shown in the manager Reservations table. */
-export type DisplayResStatus =
-  | "nouvelle"
-  | "confirmée"
-  | "logé"
-  | "annulée";
+export type DisplayResStatus = "nouvelle" | "confirmée" | "logé" | "annulée";
 
 /** Ordered list used for the status filter dropdown. */
-export const DISPLAY_RES_STATUSES: DisplayResStatus[] = [
-  "nouvelle",
-  "confirmée",
-  "logé",
-  "annulée",
-];
+export const DISPLAY_RES_STATUSES: DisplayResStatus[] = ["nouvelle", "confirmée", "logé", "annulée"];
 
 /**
  * Derive the display status from DB status + departure datetime.
@@ -64,18 +50,22 @@ export function displayReservationStatus(
 }
 
 /**
- * A reservation is "locked" (cannot be edited or have its status changed)
- * when its display status is "logé" or "annulée".
+ * A reservation is "fully locked" (no field can be edited) only when
+ * its display status is "annulée".
+ *
+ * "logé" reservations are PARTIALLY editable: advance and total amount
+ * can still be updated, but structural fields (dates, type, guests…)
+ * are locked — see priceLocked in reservation-form-dialog.tsx.
  */
 export function isLocked(displayStatus: DisplayResStatus): boolean {
-  return displayStatus === "annulée"; // logé est toujours modifiable
+  return displayStatus === "annulée";
 }
 
 /** Maximum guests allowed per accommodation type (shared by all forms). */
 export const MAX_GUESTS_BY_TYPE: Record<string, number> = {
-  chambre:      2,
-  studio:       2,
-  appartement:  4,
+  chambre: 2,
+  studio: 2,
+  appartement: 4,
 };
 
 /**
@@ -84,11 +74,11 @@ export const MAX_GUESTS_BY_TYPE: Record<string, number> = {
  * by checking the clock before applying any transition server-side.
  */
 export const RES_TRANSITIONS: Record<string, ResStatus[]> = {
-  nouvelle:  ["confirmée", "annulée"],
+  nouvelle: ["confirmée", "annulée"],
   confirmée: ["annulée"],
-  annulée:   [],
-  checkin:   [],
-  terminée:  [],
+  annulée: [],
+  checkin: [],
+  terminée: [],
 };
 
 export function canTransition(from: string, to: string): boolean {
@@ -100,39 +90,30 @@ export const ACTIVE_RES_STATUSES = ["confirmée", "checkin"] as const;
 
 // ── Booking channel ────────────────────────────────────────────────────────
 export const CHANNEL_LABELS: Record<string, string> = {
-  website:  "Site web",
+  website: "Site web",
   whatsapp: "WhatsApp",
-  phone:    "Téléphone",
-  walkin:   "Sur place",
+  phone: "Téléphone",
+  walkin: "Sur place",
 };
 
 // ── Payment ──────────────────────────────────────────────────────────────
-export type PayStatus =
-  | "non_paye"
-  | "acompte"
-  | "partiel"
-  | "paye"
-  | "solde_du";
+export type PayStatus = "non_paye" | "acompte" | "partiel" | "paye" | "solde_du";
 
 export const PAY_STATUS_LABELS: Record<string, string> = {
-  non_paye:  "Non payé",
-  acompte:   "Acompte reçu",
-  partiel:   "Partiellement payé",
-  paye:      "Payé",
-  solde_du:  "Solde dû",
+  non_paye: "Non payé",
+  acompte: "Acompte reçu",
+  partiel: "Partiellement payé",
+  paye: "Payé",
+  solde_du: "Solde dû",
 };
 
-export type PayMethod =
-  | "especes"
-  | "mobile_money"
-  | "virement"
-  | "carte_externe";
+export type PayMethod = "especes" | "mobile_money" | "virement" | "carte_externe";
 
 export const PAY_METHOD_LABELS: Record<string, string> = {
-  especes:        "Espèces",
-  mobile_money:   "Mobile Money",
-  virement:       "Virement bancaire",
-  carte_externe:  "Carte bancaire (hors plateforme)",
+  especes: "Espèces",
+  mobile_money: "Mobile Money",
+  virement: "Virement bancaire",
+  carte_externe: "Carte bancaire (hors plateforme)",
 };
 
 export function derivePaymentStatus(total: number, paid: number): PayStatus {
@@ -145,10 +126,10 @@ export function derivePaymentStatus(total: number, paid: number): PayStatus {
 export type OpStatus = "actif" | "nettoyage" | "maintenance" | "bloquee";
 
 export const OP_STATUS_LABELS: Record<string, string> = {
-  actif:        "Actif",
-  nettoyage:    "Nettoyage",
-  maintenance:  "Maintenance",
-  bloquee:      "Bloquée",
+  actif: "Actif",
+  nettoyage: "Nettoyage",
+  maintenance: "Maintenance",
+  bloquee: "Bloquée",
 };
 
 // ── Computed (displayed) unit status ─────────────────────────────────────
@@ -163,29 +144,37 @@ export type UnitStatus =
   | "conflit";
 
 export const UNIT_STATUS_LABELS: Record<UnitStatus, string> = {
-  libre:        "Libre",
-  occupee:      "Occupée",
-  arrivee:      "Arrivée prévue",
-  depart:       "Départ prévu",
-  nettoyage:    "Nettoyage",
-  maintenance:  "Maintenance",
-  bloquee:      "Bloquée",
-  conflit:      "Conflit",
+  libre: "Libre",
+  occupee: "Occupée",
+  arrivee: "Arrivée prévue",
+  depart: "Départ prévu",
+  nettoyage: "Nettoyage",
+  maintenance: "Maintenance",
+  bloquee: "Bloquée",
+  conflit: "Conflit",
 };
 
 export function statusFillClass(s: UnitStatus | "confirmee" | "present"): string {
   switch (s) {
-    case "libre":       return "st-libre";
+    case "libre":
+      return "st-libre";
     case "occupee":
-    case "present":     return "st-present";
-    case "confirmee":   return "st-confirme";
+    case "present":
+      return "st-present";
+    case "confirmee":
+      return "st-confirme";
     case "arrivee":
-    case "depart":      return "st-jour";
+    case "depart":
+      return "st-jour";
     case "conflit":
-    case "maintenance": return "st-conflit";
-    case "bloquee":     return "st-bloque";
-    case "nettoyage":   return "st-nettoyage";
-    default:            return "st-libre";
+    case "maintenance":
+      return "st-conflit";
+    case "bloquee":
+      return "st-bloque";
+    case "nettoyage":
+      return "st-nettoyage";
+    default:
+      return "st-libre";
   }
 }
 
@@ -195,37 +184,25 @@ export interface UnitBookingLite {
   status: string;
 }
 
-export function computeUnitStatus(
-  opStatus: string,
-  bookings: UnitBookingLite[],
-  today: string,
-): UnitStatus {
+export function computeUnitStatus(opStatus: string, bookings: UnitBookingLite[], today: string): UnitStatus {
   if (opStatus === "maintenance") return "maintenance";
-  if (opStatus === "bloquee")     return "bloquee";
-  if (opStatus === "nettoyage")   return "nettoyage";
+  if (opStatus === "bloquee") return "bloquee";
+  if (opStatus === "nettoyage") return "nettoyage";
 
-  const active = bookings.filter(
-    (b) => b.status !== "annulée" && b.status !== "terminée",
-  );
-  const overlap = active.filter(
-    (b) => b.arrival_date <= today && b.departure_date > today,
-  );
-  const realOverlap    = overlap.filter((b) => b.status !== "bloqué");
+  const active = bookings.filter((b) => b.status !== "annulée" && b.status !== "terminée");
+  const overlap = active.filter((b) => b.arrival_date <= today && b.departure_date > today);
+  const realOverlap = overlap.filter((b) => b.status !== "bloqué");
   const blockedOverlap = overlap.filter((b) => b.status === "bloqué");
 
   if (realOverlap.length > 1) return "conflit";
 
-  const arrivesToday = active.some(
-    (b) => b.status !== "bloqué" && b.arrival_date === today,
-  );
-  const departsToday = active.some(
-    (b) => b.status !== "bloqué" && b.departure_date === today,
-  );
+  const arrivesToday = active.some((b) => b.status !== "bloqué" && b.arrival_date === today);
+  const departsToday = active.some((b) => b.status !== "bloqué" && b.departure_date === today);
 
-  if (realOverlap.length === 1)   return "occupee";
-  if (blockedOverlap.length > 0)  return "bloquee";
-  if (departsToday)               return "depart";
-  if (arrivesToday)               return "arrivee";
+  if (realOverlap.length === 1) return "occupee";
+  if (blockedOverlap.length > 0) return "bloquee";
+  if (departsToday) return "depart";
+  if (arrivesToday) return "arrivee";
   return "libre";
 }
 
@@ -237,7 +214,7 @@ export function nightsBetween(arrival: string, departure: string): number {
 }
 
 // ── Booking-unit billing rule ─────────────────────────────────────────────
-export const DEFAULT_CHECKIN_TIME  = "14:00";
+export const DEFAULT_CHECKIN_TIME = "14:00";
 export const DEFAULT_CHECKOUT_TIME = "11:00";
 
 export function toDateTime(date: string, time?: string | null): Date {
@@ -257,7 +234,8 @@ export function bookingUnits(arrival: Date, departure: Date): number {
     Number.isNaN(arrival.getTime()) ||
     Number.isNaN(departure.getTime()) ||
     departure <= arrival
-  ) return 0;
+  )
+    return 0;
 
   let crossings = 0;
   const noon = new Date(arrival);
@@ -277,7 +255,7 @@ export function bookingUnitsFrom(
   departureTime: string | null | undefined,
 ): number {
   return bookingUnits(
-    toDateTime(arrivalDate, arrivalTime   ?? DEFAULT_CHECKIN_TIME),
+    toDateTime(arrivalDate, arrivalTime ?? DEFAULT_CHECKIN_TIME),
     toDateTime(departureDate, departureTime ?? DEFAULT_CHECKOUT_TIME),
   );
 }
@@ -288,19 +266,16 @@ export function shortRef(id: string): string {
 
 // ── Team roles ───────────────────────────────────────────────────────────
 export const TEAM_ROLE_LABELS: Record<string, string> = {
-  admin:        "Administrateur",
+  admin: "Administrateur",
   proprietaire: "Propriétaire",
   gestionnaire: "Gestionnaire",
-  technicien:   "Technicien",
-  reception:    "Réception",
-  menage:       "Ménage",
-  comptable:    "Comptable",
+  technicien: "Technicien",
+  reception: "Réception",
+  menage: "Ménage",
+  comptable: "Comptable",
 };
 
-export const ASSIGNABLE_ROLES = [
-  "proprietaire",
-  "gestionnaire",
-] as const;
+export const ASSIGNABLE_ROLES = ["proprietaire", "gestionnaire"] as const;
 
 export type RoleTier = "owner" | "manager" | "technician" | null;
 
@@ -317,8 +292,8 @@ export function canManageTeam(roles: string[]): boolean {
 
 export const ROLE_TIER_LABELS: Record<"fr" | "en" | "de", Record<Exclude<RoleTier, null>, string>> = {
   fr: { owner: "Propriétaire", manager: "Gestionnaire", technician: "Technicien" },
-  en: { owner: "Owner",        manager: "Manager",      technician: "Technician" },
-  de: { owner: "Eigentümer",   manager: "Manager",      technician: "Techniker"  },
+  en: { owner: "Owner", manager: "Manager", technician: "Technician" },
+  de: { owner: "Eigentümer", manager: "Manager", technician: "Techniker" },
 };
 
 export function canManageFinance(tier: RoleTier): boolean {
