@@ -293,6 +293,7 @@ export function ReservationFormDialog({
       advance:       advanceNum,
       totalAmount:   total,
       notes:         form.notes.trim() || undefined,
+      unitId:        form.unitId ? form.unitId : (isEdit ? null : undefined),
     };
 
     setBusy(true);
