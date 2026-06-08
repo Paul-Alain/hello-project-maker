@@ -438,6 +438,7 @@ export function ReservationFormDialog({
                         type: v,
                         guests: String(Math.min(Number(f.guests) || 1, max)),
                         customUnitPrice: "", // reset custom price on type change
+                        unitId: "", // reset chosen unit on type change
                       };
                     })
                   }
@@ -463,6 +464,37 @@ export function ReservationFormDialog({
                 )}
               </div>
             </div>
+
+            {/* Unit assignment (manager picks the physical unit) */}
+            {form.type && (
+              <div className="space-y-1.5">
+                <Label>Unité physique assignée</Label>
+                <Select
+                  value={form.unitId || "__auto"}
+                  onValueChange={(v) => set("unitId", v === "__auto" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Attribution automatique" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__auto">Attribution automatique</SelectItem>
+                    {allUnits
+                      .filter((u) => u.type === form.type)
+                      .map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.label}
+                          {(!u.available || (u.op_status && u.op_status !== "actif"))
+                            ? ` · ${u.op_status ?? "indisponible"}`
+                            : ""}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Choisissez une unité précise ou laissez l'attribution automatique.
+                </p>
+              </div>
+            )}
 
             {/* Dates */}
             <div className="grid gap-4 sm:grid-cols-2">
