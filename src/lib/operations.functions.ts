@@ -63,12 +63,18 @@ interface ResRow {
 const CAMEROUN_OFFSET_MS = 1 * 60 * 60 * 1000; // UTC+1
 
 function nowCameroun(): number {
-  return Date.now() + CAMEROUN_OFFSET_MS - new Date().getTimezoneOffset() * 60_000;
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Africa/Douala" })
+  ).getTime();
 }
 
 function todayLocalIso(): string {
-  const utc = Date.now() + CAMEROUN_OFFSET_MS;
-  return new Date(utc).toISOString().slice(0, 10);
+  const d = new Date();
+  const cam = new Date(d.toLocaleString("en-US", { timeZone: "Africa/Douala" }));
+  const y = cam.getFullYear();
+  const m = String(cam.getMonth() + 1).padStart(2, "0");
+  const day = String(cam.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function dateTimeMs(date: string, time: string | null | undefined, fallback: string): number {
