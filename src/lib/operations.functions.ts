@@ -63,18 +63,12 @@ interface ResRow {
 const CAMEROUN_OFFSET_MS = 1 * 60 * 60 * 1000; // UTC+1
 
 function nowCameroun(): number {
-  return new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Africa/Douala" })
-  ).getTime();
+  return Date.now() + CAMEROUN_OFFSET_MS - new Date().getTimezoneOffset() * 60_000;
 }
 
 function todayLocalIso(): string {
-  const d = new Date();
-  const cam = new Date(d.toLocaleString("en-US", { timeZone: "Africa/Douala" }));
-  const y = cam.getFullYear();
-  const m = String(cam.getMonth() + 1).padStart(2, "0");
-  const day = String(cam.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  const utc = Date.now() + CAMEROUN_OFFSET_MS;
+  return new Date(utc).toISOString().slice(0, 10);
 }
 
 function dateTimeMs(date: string, time: string | null | undefined, fallback: string): number {
@@ -89,22 +83,12 @@ export const staffGetStatus = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const roles = await getUserRoles(supabase, userId);
-    const staffRoles = [
-      "admin",
-      "proprietaire",
-      "gestionnaire",
-      "technicien",
-      "reception",
-      "menage",
-      "comptable",
-    ];
+    const staffRoles = ["admin", "proprietaire", "gestionnaire", "technicien", "reception", "menage", "comptable"];
     const isStaff = roles.some((r) => staffRoles.includes(r));
     return {
       isStaff,
       isAdmin: roles.includes("admin") || roles.includes("proprietaire"),
-      canManageTeam:
-        roles.includes("admin") ||
-        roles.includes("proprietaire"),
+      canManageTeam: roles.includes("admin") || roles.includes("proprietaire"),
       roles,
     };
   });
@@ -196,19 +180,19 @@ export const opListReservations = createServerFn({ method: "GET" })
       .map((r) => {
         const billableUnits = bookingUnitsOf(r);
         const unitPrice = priceOf(r);
-        const autoTotal  = billableUnits * unitPrice;
-        const rawTotal   = Number(r.total_amount);
+        const autoTotal = billableUnits * unitPrice;
+        const rawTotal = Number(r.total_amount);
         const rawAdvance = Number(r.advance_amount);
-        const total   = Number.isFinite(rawTotal)   && rawTotal   > 0 ? rawTotal   : autoTotal;
+        const total = Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
         const advance = Number.isFinite(rawAdvance) && rawAdvance >= 0 ? rawAdvance : 0;
         const paid = paidMap.get(r.id) ?? 0;
-        const nowMs       = nowCameroun();
-        const arrivalMs   = dateTimeMs(r.arrival_date,   r.arrival_time,   DEFAULT_CHECKIN_TIME);
+        const nowMs = nowCameroun();
+        const arrivalMs = dateTimeMs(r.arrival_date, r.arrival_time, DEFAULT_CHECKIN_TIME);
         const departureMs = dateTimeMs(r.departure_date, r.departure_time, DEFAULT_CHECKOUT_TIME);
-        const dbStatus    = r.status ?? "nouvelle";
+        const dbStatus = r.status ?? "nouvelle";
         // Auto-assign unit for calendar display if not assigned
-        const effectiveUnitId = r.logement_unit_id ??
-          (r.logement_type ? firstUnitByType.get(r.logement_type) ?? null : null);
+        const effectiveUnitId =
+          r.logement_unit_id ?? (r.logement_type ? (firstUnitByType.get(r.logement_type) ?? null) : null);
         return {
           id: r.id,
           ref: shortRef(r.id),
@@ -225,7 +209,7 @@ export const opListReservations = createServerFn({ method: "GET" })
           displayStatus: displayReservationStatus(dbStatus, arrivalMs, departureMs, nowMs),
           payment_status: r.payment_status,
           unitId: effectiveUnitId,
-          unitLabel: effectiveUnitId ? unitById.get(effectiveUnitId)?.label ?? "—" : "—",
+          unitLabel: effectiveUnitId ? (unitById.get(effectiveUnitId)?.label ?? "—") : "—",
           logement_type: r.logement_type,
           units: billableUnits,
           unitPrice,
@@ -242,7 +226,6 @@ export const opListReservations = createServerFn({ method: "GET" })
       })
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
   });
-
 
 // ── Occupancy calendar (read-only operational view) ──────────────────────
 // Returns every physical unit plus all reservations (any status, incl.
@@ -278,15 +261,15 @@ export const opGetCalendar = createServerFn({ method: "GET" })
     }));
 
     const calReservations = reservations.map((r) => {
-      const rawTotal   = Number(r.total_amount);
+      const rawTotal = Number(r.total_amount);
       const rawAdvance = Number(r.advance_amount);
-      const autoTotal  = effectiveTotal(r, priceOf(r));
-      const total   = Number.isFinite(rawTotal)   && rawTotal   > 0 ? rawTotal   : autoTotal;
+      const autoTotal = effectiveTotal(r, priceOf(r));
+      const total = Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
       const advance = Number.isFinite(rawAdvance) && rawAdvance >= 0 ? rawAdvance : 0;
       const paid = paidMap.get(r.id) ?? 0;
       // Auto-assign unit for calendar display if not assigned
-      const effectiveUnitId = r.logement_unit_id ??
-        (r.logement_type ? firstUnitByType.get(r.logement_type) ?? null : null);
+      const effectiveUnitId =
+        r.logement_unit_id ?? (r.logement_type ? (firstUnitByType.get(r.logement_type) ?? null) : null);
       return {
         id: r.id,
         ref: shortRef(r.id),
@@ -302,9 +285,9 @@ export const opGetCalendar = createServerFn({ method: "GET" })
         payment_status: r.payment_status,
         channel: r.channel ?? "website",
         logement_unit_id: effectiveUnitId,
-        unitLabel: effectiveUnitId ? unitById.get(effectiveUnitId)?.label ?? null : null,
+        unitLabel: effectiveUnitId ? (unitById.get(effectiveUnitId)?.label ?? null) : null,
         logement_type: r.logement_type,
-        unitType: effectiveUnitId ? unitById.get(effectiveUnitId)?.type ?? null : null,
+        unitType: effectiveUnitId ? (unitById.get(effectiveUnitId)?.type ?? null) : null,
         notes: r.notes,
         total,
         paid,
@@ -315,9 +298,6 @@ export const opGetCalendar = createServerFn({ method: "GET" })
 
     return { units: calUnits, reservations: calReservations };
   });
-
-
-
 
 // ── Dashboard ────────────────────────────────────────────────────────────
 export const opGetDashboard = createServerFn({ method: "GET" })
@@ -400,7 +380,7 @@ export const opGetDashboard = createServerFn({ method: "GET" })
         guests: r.guests,
         status: r.status,
         paymentStatus: r.payment_status,
-        unitLabel: r.logement_unit_id ? unitById.get(r.logement_unit_id)?.label ?? "—" : "—",
+        unitLabel: r.logement_unit_id ? (unitById.get(r.logement_unit_id)?.label ?? "—") : "—",
         unitId: r.logement_unit_id,
         type: r.logement_type,
         arrival: r.arrival_date,
@@ -415,7 +395,10 @@ export const opGetDashboard = createServerFn({ method: "GET" })
     };
 
     const arrivals = reservations
-      .filter((r) => r.arrival_date === today && r.status !== "annulée" && r.status !== BLOCK_STATUS && r.status !== "terminée")
+      .filter(
+        (r) =>
+          r.arrival_date === today && r.status !== "annulée" && r.status !== BLOCK_STATUS && r.status !== "terminée",
+      )
       .map(fmtRes);
     const departures = reservations
       .filter((r) => r.departure_date === today && r.status !== "annulée" && r.status !== BLOCK_STATUS)
@@ -449,9 +432,7 @@ export const opGetDashboard = createServerFn({ method: "GET" })
 
     // Conflicts: >1 active booking overlapping on a unit
     for (const u of units) {
-      const active = (byUnit.get(u.id) ?? []).filter(
-        (b) => ["confirmée", "checkin"].includes(b.status),
-      );
+      const active = (byUnit.get(u.id) ?? []).filter((b) => ["confirmée", "checkin"].includes(b.status));
       for (let i = 0; i < active.length; i++) {
         for (let j = i + 1; j < active.length; j++) {
           const a = active[i];
@@ -587,15 +568,20 @@ export const opSetReservationStatus = createServerFn({ method: "POST" })
       .single();
     if (e0) throw new Error(e0.message);
 
+    // Check if departure has passed → reservation is "logé" → LOCKED
     const departureMs = dateTimeMs(row.departure_date, row.departure_time, DEFAULT_CHECKOUT_TIME);
     const nowMs = nowCameroun();
 
-    // Annulée depuis plus de 5h → verrou total
+    if (row.status === "confirmée" && nowMs >= departureMs) {
+      throw new Error("Cette réservation est verrouillée (client logé) — aucune modification possible.");
+    }
     if (row.status === "annulée") {
-      const cancelledAt = (row as any).updated_at;
-      if (cancelledAt && (nowMs - new Date(cancelledAt).getTime() > 5 * 60 * 60 * 1000)) {
-        throw new Error("Cette réservation annulée est verrouillée (plus de 5h après annulation).");
-      }
+      throw new Error("Cette réservation est annulée — aucune modification possible.");
+    }
+
+    // Cancellation only allowed before departure
+    if (data.status === "annulée" && nowMs > departureMs) {
+      throw new Error("Impossible d'annuler : la date de départ est déjà dépassée.");
     }
 
     // Conflict check when confirming with a physical unit assigned
@@ -607,14 +593,11 @@ export const opSetReservationStatus = createServerFn({ method: "POST" })
 
     // Quand annulée → montants à 0
     if (data.status === "annulée") {
-      patch.total_amount   = 0;
+      patch.total_amount = 0;
       patch.advance_amount = 0;
     }
 
-    const { error } = await sb
-      .from("reservations")
-      .update(patch)
-      .eq("id", data.id);
+    const { error } = await sb.from("reservations").update(patch).eq("id", data.id);
     if (error) throw new Error(error.message);
 
     const name = await actorName(sb, context.userId);
@@ -656,11 +639,7 @@ export const opCheckIn = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
-    const { data: row, error } = await sb
-      .from("reservations")
-      .select("status, name")
-      .eq("id", data.id)
-      .single();
+    const { data: row, error } = await sb.from("reservations").select("status, name").eq("id", data.id).single();
     if (error) throw new Error(error.message);
     if (!["confirmée"].includes(row.status))
       throw new Error("Le check-in n'est possible que pour une réservation confirmée.");
@@ -730,10 +709,7 @@ export const opSetUnitOpStatus = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
-    const { error } = await sb
-      .from("logement_units")
-      .update({ op_status: data.opStatus })
-      .eq("id", data.unitId);
+    const { error } = await sb.from("logement_units").update({ op_status: data.opStatus }).eq("id", data.unitId);
     if (error) throw new Error(error.message);
     const name = await actorName(sb, context.userId);
     await logActivity(sb, {
@@ -748,7 +724,10 @@ export const opSetUnitOpStatus = createServerFn({ method: "POST" })
   });
 
 // ── Payments ─────────────────────────────────────────────────────────────
-async function recomputePaymentStatus(sb: any, reservationId: string): Promise<{ total: number; paid: number; balance: number; status: string }> {
+async function recomputePaymentStatus(
+  sb: any,
+  reservationId: string,
+): Promise<{ total: number; paid: number; balance: number; status: string }> {
   const { data: r, error } = await sb
     .from("reservations")
     .select("total_amount, arrival_date, departure_date, arrival_time, departure_time, logement_unit_id, logement_type")
@@ -765,12 +744,7 @@ async function recomputePaymentStatus(sb: any, reservationId: string): Promise<{
       .maybeSingle();
     price = Number((u as any)?.logements?.price ?? 0);
   } else if (r.logement_type) {
-    const { data: l } = await sb
-      .from("logements")
-      .select("price")
-      .eq("type", r.logement_type)
-      .limit(1)
-      .maybeSingle();
+    const { data: l } = await sb.from("logements").select("price").eq("type", r.logement_type).limit(1).maybeSingle();
     price = Number((l as any)?.price ?? 0);
   }
   const units = bookingUnitsFrom(
@@ -818,11 +792,7 @@ export const opAddPayment = createServerFn({ method: "POST" })
     const totals = await recomputePaymentStatus(sb, data.reservationId);
 
     // Notify the client (best-effort).
-    const { data: r } = await sb
-      .from("reservations")
-      .select("name, email")
-      .eq("id", data.reservationId)
-      .single();
+    const { data: r } = await sb.from("reservations").select("name, email").eq("id", data.reservationId).single();
     if (r?.email) {
       try {
         const { enqueueAppEmail } = await import("@/lib/email/enqueue.server");
@@ -887,10 +857,7 @@ export const opSetReservationTotal = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
-    const { error } = await sb
-      .from("reservations")
-      .update({ total_amount: data.totalAmount })
-      .eq("id", data.id);
+    const { error } = await sb.from("reservations").update({ total_amount: data.totalAmount }).eq("id", data.id);
     if (error) throw new Error(error.message);
     await recomputePaymentStatus(sb, data.id);
     return { ok: true };
@@ -983,8 +950,14 @@ const reservationFormBase = z.object({
   logementType: LOGEMENT_TYPE,
   arrival: DATE,
   departure: DATE,
-  arrivalTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  departureTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  arrivalTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional(),
+  departureTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional(),
   channel: z.enum(["website", "whatsapp", "phone", "walkin"]).default("walkin"),
   guests: z.number().int().min(1).max(20),
   advance: z.number().min(0).max(100_000_000).default(0),
@@ -999,8 +972,8 @@ const departureAfterArrival = (v: {
   arrivalTime?: string;
   departureTime?: string;
 }) => {
-  const arrMs = new Date(`${v.arrival}T${(v.arrivalTime ?? DEFAULT_CHECKIN_TIME).slice(0,5)}:00`).getTime();
-  const depMs = new Date(`${v.departure}T${(v.departureTime ?? DEFAULT_CHECKOUT_TIME).slice(0,5)}:00`).getTime();
+  const arrMs = new Date(`${v.arrival}T${(v.arrivalTime ?? DEFAULT_CHECKIN_TIME).slice(0, 5)}:00`).getTime();
+  const depMs = new Date(`${v.departure}T${(v.departureTime ?? DEFAULT_CHECKOUT_TIME).slice(0, 5)}:00`).getTime();
   return depMs > arrMs;
 };
 
@@ -1049,12 +1022,7 @@ async function pickFreeUnit(
 ): Promise<string | null> {
   const units = await loadUnits(sb);
   const candidates = units
-    .filter(
-      (u) =>
-        u.type === logementType &&
-        u.available &&
-        (u.op_status === "actif" || !u.op_status),
-    )
+    .filter((u) => u.type === logementType && u.available && (u.op_status === "actif" || !u.op_status))
     .sort((a, b) => a.sort_order - b.sort_order);
   if (candidates.length === 0) return null;
 
@@ -1066,10 +1034,7 @@ async function pickFreeUnit(
 
   const overlaps = (unitId: string) =>
     (active ?? []).some(
-      (r: any) =>
-        r.logement_unit_id === unitId &&
-        arrival < r.departure_date &&
-        r.arrival_date < departure,
+      (r: any) => r.logement_unit_id === unitId && arrival < r.departure_date && r.arrival_date < departure,
     );
 
   for (const u of candidates) {
@@ -1087,12 +1052,7 @@ export const opCreateReservation = createServerFn({ method: "POST" })
 
     // Auto-assign a free unit of the chosen type so the booking is visible on
     // the occupancy calendar (which is organised by unit).
-    const unitId = await pickFreeUnit(
-      sb,
-      data.logementType,
-      data.arrival,
-      data.departure,
-    );
+    const unitId = await pickFreeUnit(sb, data.logementType, data.arrival, data.departure);
 
     const { data: inserted, error } = await sb
       .from("reservations")
@@ -1148,13 +1108,11 @@ export const opUpdateReservation = createServerFn({ method: "POST" })
     const unitRow = existing?.logement_unit_id
       ? (await loadUnits(sb)).find((u) => u.id === existing.logement_unit_id)
       : undefined;
-    const needsUnit =
-      !existing?.logement_unit_id ||
-      (unitRow && unitRow.type !== data.logementType);
+    const needsUnit = !existing?.logement_unit_id || (unitRow && unitRow.type !== data.logementType);
 
     const newUnitId = needsUnit
       ? await pickFreeUnit(sb, data.logementType, data.arrival, data.departure, data.id)
-      : existing?.logement_unit_id ?? null;
+      : (existing?.logement_unit_id ?? null);
 
     const { error } = await sb
       .from("reservations")
@@ -1189,12 +1147,9 @@ export const opUpdateReservation = createServerFn({ method: "POST" })
     return { ok: true, id: data.id };
   });
 
-
 export const opAssignUnit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ reservationId: UUID, unitId: UUID.nullable() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ reservationId: UUID, unitId: UUID.nullable() }).parse(input))
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
@@ -1246,7 +1201,7 @@ export const opListClients = createServerFn({ method: "GET" })
       // Un client est "ayant séjourné" si son statut est confirmée
       // ET sa date/heure de départ est dépassée (= logé)
       const depMs = new Date(
-        `${r.departure_date}T${(r.departure_time ?? DEFAULT_CHECKOUT_TIME).slice(0, 5)}:00`
+        `${r.departure_date}T${(r.departure_time ?? DEFAULT_CHECKOUT_TIME).slice(0, 5)}:00`,
       ).getTime();
       const isLoge = r.status === "confirmée" && depMs <= nowMs;
       // Aussi accepter les anciens statuts legacy (checkin, terminée)
@@ -1259,8 +1214,7 @@ export const opListClients = createServerFn({ method: "GET" })
       if (existing) {
         existing.reservations += 1;
         existing.totalSpent += paid;
-        if (!existing.lastStay || r.departure_date > existing.lastStay)
-          existing.lastStay = r.departure_date;
+        if (!existing.lastStay || r.departure_date > existing.lastStay) existing.lastStay = r.departure_date;
         if (!existing.email && r.email) existing.email = r.email;
       } else {
         clients.set(key, {
@@ -1274,9 +1228,7 @@ export const opListClients = createServerFn({ method: "GET" })
         });
       }
     }
-    return Array.from(clients.values()).sort((a, b) =>
-      (b.lastStay ?? "").localeCompare(a.lastStay ?? "")
-    );
+    return Array.from(clients.values()).sort((a, b) => (b.lastStay ?? "").localeCompare(a.lastStay ?? ""));
   });
 
 export const opGetClientDetail = createServerFn({ method: "GET" })
@@ -1299,7 +1251,10 @@ export const opGetClientDetail = createServerFn({ method: "GET" })
       ids.length
         ? sb.from("payments").select("id, reservation_id, amount, method, created_at").in("reservation_id", ids)
         : Promise.resolve({ data: [] as any[] }),
-      sb.from("messages").select("id, name, phone, email, message, status, created_at").order("created_at", { ascending: false }),
+      sb
+        .from("messages")
+        .select("id, name, phone, email, message, status, created_at")
+        .order("created_at", { ascending: false }),
     ]);
 
     const first = matches[0];
@@ -1341,9 +1296,7 @@ export const opListTeam = createServerFn({ method: "GET" })
     await assertStaff(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: roleRows, error } = await supabaseAdmin
-      .from("user_roles")
-      .select("user_id, role");
+    const { data: roleRows, error } = await supabaseAdmin.from("user_roles").select("user_id, role");
     if (error) throw new Error(error.message);
 
     const byUser = new Map<string, string[]>();
@@ -1380,11 +1333,13 @@ export const opListTeam = createServerFn({ method: "GET" })
 export const opSetTeamRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({
-      // Accept email, phone, or name — we'll try to match
-      identifier: z.string().trim().min(1).max(160),
-      role: z.enum(["proprietaire", "gestionnaire"]),
-    }).parse(input),
+    z
+      .object({
+        // Accept email, phone, or name — we'll try to match
+        identifier: z.string().trim().min(1).max(160),
+        role: z.enum(["proprietaire", "gestionnaire"]),
+      })
+      .parse(input),
   )
   .handler(async ({ context, data }) => {
     await assertCanManageTeam(context.supabase, context.userId);
@@ -1400,21 +1355,26 @@ export const opSetTeamRole = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       const found = list.users.find((u) => {
         if ((u.email ?? "").toLowerCase() === id) return true;
-        if (id.replace(/\D/g, "").length >= 6 &&
-            (u.phone ?? "").replace(/\D/g, "") === id.replace(/\D/g, "")) return true;
+        if (id.replace(/\D/g, "").length >= 6 && (u.phone ?? "").replace(/\D/g, "") === id.replace(/\D/g, ""))
+          return true;
         const meta = u.user_metadata ?? u.raw_user_meta_data ?? {};
         const fullName = (meta.full_name ?? meta.name ?? meta.display_name ?? "").toLowerCase().trim();
         if (fullName && fullName === id) return true;
         if (fullName && fullName.includes(id)) return true;
         return false;
       });
-      if (found) { targetId = found.id; targetEmail = found.email ?? null; break; }
+      if (found) {
+        targetId = found.id;
+        targetEmail = found.email ?? null;
+        break;
+      }
       if (list.users.length < 1000) break;
     }
-    if (!targetId) throw new Error(
-      `Aucun compte ne correspond à "${data.identifier}". ` +
-      `Vérifiez que le membre a bien créé un compte sur le site.`
-    );
+    if (!targetId)
+      throw new Error(
+        `Aucun compte ne correspond à "${data.identifier}". ` +
+          `Vérifiez que le membre a bien créé un compte sur le site.`,
+      );
 
     const { error } = await supabaseAdmin
       .from("user_roles")
@@ -1423,8 +1383,11 @@ export const opSetTeamRole = createServerFn({ method: "POST" })
 
     const name = await actorName(context.supabase, context.userId);
     await logActivity(context.supabase, {
-      userId: context.userId, userName: name,
-      action: "role_attribue", objectType: "team", objectId: targetId,
+      userId: context.userId,
+      userName: name,
+      action: "role_attribue",
+      objectType: "team",
+      objectId: targetId,
       summary: `${targetEmail ?? data.identifier} → ${data.role}`,
     });
     return { ok: true, targetEmail };
@@ -1433,9 +1396,7 @@ export const opSetTeamRole = createServerFn({ method: "POST" })
 // Replace gestionnaire: remove all existing gestionnaire roles then assign new one
 export const opReplaceManager = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ identifier: z.string().trim().min(1).max(160) }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ identifier: z.string().trim().min(1).max(160) }).parse(input))
   .handler(async ({ context, data }) => {
     await assertCanManageTeam(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -1444,7 +1405,7 @@ export const opReplaceManager = createServerFn({ method: "POST" })
     let targetId: string | null = null;
     let targetEmail: string | null = null;
     const id = data.identifier.toLowerCase().trim();
-    
+
     for (let page = 1; ; page++) {
       const { data: list, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
       if (error) throw new Error(error.message);
@@ -1452,8 +1413,8 @@ export const opReplaceManager = createServerFn({ method: "POST" })
         // Match by email (exact)
         if ((u.email ?? "").toLowerCase() === id) return true;
         // Match by phone (digits only)
-        if (id.replace(/\D/g, "").length >= 6 &&
-            (u.phone ?? "").replace(/\D/g, "") === id.replace(/\D/g, "")) return true;
+        if (id.replace(/\D/g, "").length >= 6 && (u.phone ?? "").replace(/\D/g, "") === id.replace(/\D/g, ""))
+          return true;
         // Match by full_name in any metadata field
         const meta = u.user_metadata ?? u.raw_user_meta_data ?? {};
         const fullName = (meta.full_name ?? meta.name ?? meta.display_name ?? "").toLowerCase().trim();
@@ -1462,13 +1423,18 @@ export const opReplaceManager = createServerFn({ method: "POST" })
         if (fullName && fullName.includes(id)) return true;
         return false;
       });
-      if (found) { targetId = found.id; targetEmail = found.email ?? null; break; }
+      if (found) {
+        targetId = found.id;
+        targetEmail = found.email ?? null;
+        break;
+      }
       if (list.users.length < 1000) break;
     }
-    if (!targetId) throw new Error(
-      `Aucun compte ne correspond à "${data.identifier}". ` +
-      `Vérifiez que le membre a bien créé un compte sur le site avec cet email, téléphone ou nom.`
-    );
+    if (!targetId)
+      throw new Error(
+        `Aucun compte ne correspond à "${data.identifier}". ` +
+          `Vérifiez que le membre a bien créé un compte sur le site avec cet email, téléphone ou nom.`,
+      );
 
     // Remove all existing gestionnaire roles
     await supabaseAdmin.from("user_roles").delete().eq("role", "gestionnaire");
@@ -1481,8 +1447,11 @@ export const opReplaceManager = createServerFn({ method: "POST" })
 
     const name = await actorName(context.supabase, context.userId);
     await logActivity(context.supabase, {
-      userId: context.userId, userName: name,
-      action: "role_attribue", objectType: "team", objectId: targetId,
+      userId: context.userId,
+      userName: name,
+      action: "role_attribue",
+      objectType: "team",
+      objectId: targetId,
       summary: `Nouveau gestionnaire : ${targetEmail ?? data.identifier}`,
     });
     return { ok: true, targetEmail };
@@ -1490,9 +1459,7 @@ export const opReplaceManager = createServerFn({ method: "POST" })
 
 export const opRemoveTeamRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ userId: UUID, role: z.string().min(1).max(40) }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ userId: UUID, role: z.string().min(1).max(40) }).parse(input))
   .handler(async ({ context, data }) => {
     await assertCanManageTeam(context.supabase, context.userId);
     if (data.role === "admin") throw new Error("Le rôle administrateur ne peut pas être retiré ici.");
@@ -1524,11 +1491,7 @@ export const opGetSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertStaff(context.supabase, context.userId);
-    const { data, error } = await context.supabase
-      .from("residence_settings")
-      .select("*")
-      .eq("id", true)
-      .maybeSingle();
+    const { data, error } = await context.supabase.from("residence_settings").select("*").eq("id", true).maybeSingle();
     if (error) throw new Error(error.message);
     return data;
   });
@@ -1576,9 +1539,7 @@ export const opUpdateSettings = createServerFn({ method: "POST" })
 // ── Business analytics ────────────────────────────────────────────────────
 export const opGetAnalytics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ start: DATE, end: DATE }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ start: DATE, end: DATE }).parse(input))
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
@@ -1629,9 +1590,7 @@ export const opGetAnalytics = createServerFn({ method: "GET" })
       .reduce((s, r) => s + effectiveTotal(r, priceOf(r)), 0);
 
     const completedStays = periodRes.filter((r) => r.status === "terminée").length;
-    const upcomingStays = periodRes.filter(
-      (r) => r.arrival_date >= todayIso && r.status !== "terminée",
-    ).length;
+    const upcomingStays = periodRes.filter((r) => r.arrival_date >= todayIso && r.status !== "terminée").length;
 
     return {
       start: data.start,
@@ -1655,16 +1614,11 @@ export const opGetAnalytics = createServerFn({ method: "GET" })
 // "terminée" filter matches finished stays.
 export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ start: DATE, end: DATE }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ start: DATE, end: DATE }).parse(input))
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
-    const [units, reservations] = await Promise.all([
-      loadUnits(sb),
-      loadReservations(sb),
-    ]);
+    const [units, reservations] = await Promise.all([loadUnits(sb), loadReservations(sb)]);
 
     const unitById = new Map(units.map((u) => [u.id, u]));
     const priceByType = new Map<string, number>();
@@ -1714,9 +1668,7 @@ export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
     > = {};
     for (const status of STATUSES) {
       byStatus[status] = TYPES.map((type) => {
-        const rs = rows.filter(
-          (x) => x.type === type && (status === "all" || x.status === status),
-        );
+        const rs = rows.filter((x) => x.type === type && (status === "all" || x.status === status));
         return {
           type,
           label: typeLabels[type],
