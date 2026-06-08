@@ -65,6 +65,24 @@ export type Database = {
         }
         Relationships: []
       }
+      dismissed_urgents: {
+        Row: {
+          dismissed_at: string | null
+          dismissed_by: string | null
+          urgent_id: string
+        }
+        Insert: {
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          urgent_id: string
+        }
+        Update: {
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          urgent_id?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
