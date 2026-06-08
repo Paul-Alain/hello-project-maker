@@ -188,7 +188,8 @@ export const opListReservations = createServerFn({ method: "GET" })
         // Pour les réservations annulées, respecter les montants en base (0)
         // Pour les autres, recalculer si total non défini
         const isAnnulee = r.status === "annulée";
-        const total = isAnnulee ? rawTotal : Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
+        // Annulée → total et avance ramenés à 0 (cohérent avec le dashboard analytics)
+        const total = isAnnulee ? 0 : Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
         const advance = isAnnulee ? 0 : Number.isFinite(rawAdvance) && rawAdvance >= 0 ? rawAdvance : 0;
         const paid = paidMap.get(r.id) ?? 0;
         const nowMs = nowCameroun();
