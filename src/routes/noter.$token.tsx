@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -39,11 +39,12 @@ function NoterPage() {
   const [submitted, setSubmitted] = useState(false);
 
   // Pre-fill name once token data arrives
-  useState(() => {
+  useEffect(() => {
     if (tokenData?.valid && tokenData.guestName && !name) {
       setName(tokenData.guestName);
     }
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tokenData]);
 
   const mutation = useMutation({
     mutationFn: () =>
