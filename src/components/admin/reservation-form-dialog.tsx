@@ -570,13 +570,6 @@ export function ReservationFormDialog({
               </div>
             </div>
 
-            {/* Notes */}
-            <div className="space-y-1.5">
-              <Label htmlFor="nr-notes">Notes / message</Label>
-              <Textarea id="nr-notes" rows={3} value={form.notes} maxLength={1000}
-                onChange={(e) => set("notes", e.target.value)} />
-            </div>
-
             <Button variant="gold" size="lg" className="w-full"
               disabled={busy || guestsExceeded || departureBeforeArrival} onClick={submit}>
               {busy
