@@ -6,6 +6,7 @@ import {
   Loader2,
   Search,
   Plus,
+  RefreshCw,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
@@ -52,13 +53,12 @@ type ResItem = Awaited<ReturnType<typeof opListReservations>>[number];
 // Locked = annulée depuis plus de 5h
 function isRowLocked(r: ResItem): boolean {
   if (r.displayStatus === "annulée") {
-    // Chercher quand la réservation a été annulée (updated_at ou created_at)
     const cancelledAt = (r as any).cancelled_at ?? (r as any).updated_at ?? (r as any).created_at;
     if (!cancelledAt) return true;
     const fiveHoursMs = 5 * 60 * 60 * 1000;
     return nowCam() - new Date(cancelledAt).getTime() > fiveHoursMs;
   }
-  return false; // nouvelle, confirmée, logé → toujours éditable
+  return false;
 }
 
 function statusBadgeClass(s: DisplayResStatus) {
@@ -96,12 +96,8 @@ function toEditable(r: ResItem): EditableReservation {
   };
 }
 
-// Generate list of months for filter (last 12 months + next 6)
 function generateMonthOptions() {
   const options: { value: string; label: string }[] = [];
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  // De 2020 jusqu'en 2050
   for (let year = 2020; year <= 2050; year++) {
     for (let month = 1; month <= 12; month++) {
       const d = new Date(year, month - 1, 1);
@@ -118,6 +114,7 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
   const residence = useResidence();
   const runList = useServerFn(opListReservations);
   const runStatus = useServerFn(opSetReservationStatus);
+  const [refreshing, setRefreshing] = useState(false);
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["admin-reservations"],
@@ -138,7 +135,6 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
     dir: "asc" | "desc";
   } | null>(null);
 
-  // "Actives" = departure datetime not yet passed
   const nowMs = Date.now();
   const activeCount = useMemo(
     () =>
@@ -153,24 +149,31 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
 
   const invalidate = () => Promise.all(RESERVATION_QUERY_KEYS.map((k) => qc.invalidateQueries({ queryKey: [k] })));
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all(RESERVATION_QUERY_KEYS.map((k) => qc.refetchQueries({ queryKey: [k], type: "active" })));
+      toast.success("Données mises à jour.");
+    } catch {
+      toast.error("Erreur lors de l'actualisation.");
+    }
+    setRefreshing(false);
+  };
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const list = data.filter((r) => {
-      // Active filter: departure not yet passed
       if (monthFilter === "active") {
         const depMs = dateTimeMsCam(r.departure_date, r.departure_time, "11:00");
         if (r.status === "annulée" || depMs <= nowCam()) return false;
       }
-      // Month filter: by arrival date
       if (monthFilter !== "all" && monthFilter !== "active") {
         if (!r.arrival_date.startsWith(monthFilter)) return false;
       }
-      // Search
       if (q) {
         const hay = `${r.name} ${r.phone} ${r.email ?? ""} ${r.ref}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
-      // Status filter
       if (status !== "all" && r.displayStatus !== status) return false;
       return true;
     });
@@ -227,11 +230,17 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
     <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        {!readOnly && (
-          <Button variant="gold" size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" /> Nouvelle réservation
+        <div className="flex items-center gap-2">
+          {!readOnly && (
+            <Button variant="gold" size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" /> Nouvelle réservation
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing} title="Actualiser la liste">
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            Actualiser
           </Button>
-        )}
+        </div>
         {readOnly && (
           <div className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-50 px-3 py-2 text-xs text-amber-800">
             <Lock className="h-3.5 w-3.5" /> Mode lecture seule — propriétaire
@@ -241,7 +250,6 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
 
       {/* Filters row */}
       <div className="grid gap-2 sm:grid-cols-4">
-        {/* Search */}
         <div className="relative sm:col-span-2">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -252,7 +260,6 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
           />
         </div>
 
-        {/* Month filter */}
         <Select value={monthFilter} onValueChange={setMonthFilter}>
           <SelectTrigger>
             <SelectValue placeholder="Tous les mois" />
@@ -268,7 +275,6 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
           </SelectContent>
         </Select>
 
-        {/* Status filter */}
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger>
             <SelectValue />
@@ -308,7 +314,6 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
         <p className="text-muted-foreground">Aucune réservation trouvée.</p>
       ) : (
         <>
-          {/* Table */}
           <div className="overflow-x-auto rounded-2xl border border-border/60">
             <table className="w-full text-sm">
               <thead className="bg-secondary/60 text-left text-xs uppercase text-muted-foreground">
@@ -386,7 +391,6 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
             </table>
           </div>
 
-          {/* Pagination */}
           {filtered.length > PAGE_SIZE && (
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="text-muted-foreground">{filtered.length} réservation(s)</span>
@@ -416,7 +420,6 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
         </>
       )}
 
-      {/* Dialogs */}
       <ReservationFormDialog open={createOpen} onOpenChange={setCreateOpen} onSaved={invalidate} />
       <ReservationFormDialog
         open={!!editing}
@@ -487,7 +490,6 @@ function RowActions({
   const [genBusy, setGenBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // ReadOnly mode — just show info icon
   if (readOnly) return <Eye className="h-4 w-4 text-muted-foreground/40" />;
 
   const generateLink = async () => {
@@ -505,7 +507,6 @@ function RowActions({
   const copyLink = async () => {
     if (!reviewUrl) return;
     await navigator.clipboard.writeText(reviewUrl);
-    // Sauvegarder la date du premier clic "Copier"
     if (!localStorage.getItem(STORAGE_KEY)) {
       localStorage.setItem(STORAGE_KEY, String(Date.now()));
     }
@@ -532,8 +533,6 @@ function RowActions({
     }
   };
 
-  // Logé → bouton notation + verrou
-  // Cacher le bouton 10h après la première copie
   if (r.displayStatus === "logé" && linkExpired) {
     return <Lock className="h-4 w-4 text-muted-foreground/40" />;
   }
@@ -585,7 +584,6 @@ function RowActions({
     );
   }
 
-  // Annulée → juste verrou
   if (locked) return <Lock className="h-4 w-4 text-muted-foreground/40" />;
 
   return (
