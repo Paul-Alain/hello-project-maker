@@ -184,9 +184,8 @@ export function DashboardOverview() {
     return { value: total, label: labels[metric] };
   }, [rows, metric]);
 
-  // ── Urgent arrivals within 30h ────────────────────────────────────────
   const urgentArrivals = useMemo(() => {
-    const in30h = nowMs + 30 * 60 * 60 * 1000;
+    const in24h = nowMs + 24 * 60 * 60 * 1000;
     const allRes = [...(dash?.arrivals ?? []), ...(dash?.upcomingArrivals ?? [])];
     const seen = new Set<string>();
     return allRes.filter((r) => {
@@ -195,7 +194,7 @@ export function DashboardOverview() {
       if (dismissed.has(r.id)) return false;
       if (r.status === "annulée") return false;
       const arrMs = dateTimeMsCam(r.arrival, r.arrivalTime, "14:00");
-      return arrMs <= in30h;
+      return arrMs <= in24h;
     });
   }, [dash, nowMs, dismissed]);
 
@@ -409,7 +408,7 @@ export function DashboardOverview() {
         {urgentArrivals.length === 0 ? (
           <div className="flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-50 p-4 text-sm text-emerald-700">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
-            Aucune arrivée urgente dans les prochaines 30 heures.
+            Aucune arrivée urgente dans les prochaines 24 heures.
           </div>
         ) : (
           <div className="space-y-2">
