@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { getAdminStatus } from "@/lib/admin.functions";
+import { staffGetStatus } from "@/lib/operations.functions";
 
 /**
  * Reliable, always-fresh admin detection.
@@ -16,7 +16,7 @@ import { getAdminStatus } from "@/lib/admin.functions";
 export function useAdminStatus() {
   const [session, setSession] = useState<Session | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
-  const runGetAdminStatus = useServerFn(getAdminStatus);
+  const runGetAdminStatus = useServerFn(staffGetStatus);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
@@ -38,15 +38,14 @@ export function useAdminStatus() {
     staleTime: 0,
     queryFn: async () => {
       const res = await runGetAdminStatus();
-      // Temporary debug: confirm the authenticated user id and resolved role.
-      console.log("[admin-status] userId:", userId, "isAdmin:", res.isAdmin);
+      console.log("[admin-status] userId:", userId, "isStaff:", res.isStaff, "roles:", res.roles);
       return res;
     },
   });
 
   return {
     userId,
-    isAdmin: query.data?.isAdmin === true,
+    isAdmin: query.data?.isStaff === true,
     roles: query.data?.roles ?? [],
     // "Loading" until we know the session AND (if signed in) the role result.
     loading: !sessionReady || (!!userId && query.isLoading),
