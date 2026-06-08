@@ -4,11 +4,12 @@ import {
   Building2,
   MessageSquare,
   Star,
-  UsersRound,
   BookOpen,
   ClipboardList,
   UserCheck,
-  Sparkles,
+  BarChart3,
+  Filter,
+  Lightbulb,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,7 +65,7 @@ export function DocumentationAdmin() {
               </li>
               <li>
                 La réservation est créée avec le statut{" "}
-                <Badge variant="outline">nouvelle</Badge> et <strong>sans
+                <Badge variant="outline">en attente de validation</Badge> et <strong>sans
                 unité physique attribuée</strong> (aucun numéro de chambre /
                 studio précis).
               </li>
@@ -156,41 +157,146 @@ export function DocumentationAdmin() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <Sparkles className="h-5 w-5 text-gold" />
+            <BarChart3 className="h-5 w-5 text-gold" />
             <CardTitle>3. Les métriques du Tableau de bord</CardTitle>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm leading-relaxed">
-          <p>
-            Sur l'onglet <em>Tableau de bord</em>, vous voyez en un clin d'œil
-            la santé de l'activité&nbsp;:
+          <p className="text-sm text-muted-foreground">
+            Le tableau de bord vous donne, en un coup d'œil, l'activité commerciale
+            de la résidence&nbsp;: combien de clients sont logés, combien d'argent
+            a été facturé, combien a été encaissé, et ce qu'il reste à encaisser.
           </p>
-          <ul className="space-y-2">
-            <li>
-              <strong>Réservations actives</strong> — nombre de séjours en
-              cours ou à venir (statuts <em>nouvelle, confirmée, checkin</em>).
-            </li>
-            <li>
-              <strong>Arrivées du jour</strong> — clients qui s'enregistrent
-              aujourd'hui. Préparez les clés et l'accueil.
-            </li>
-            <li>
-              <strong>Départs du jour</strong> — clients qui partent. Pensez à
-              l'état des lieux et au nettoyage.
-            </li>
-            <li>
-              <strong>Taux d'occupation</strong> — pourcentage d'unités
-              occupées sur la période visible.
-            </li>
-            <li>
-              <strong>Chiffre d'affaires</strong> — total des paiements
-              encaissés sur la période.
-            </li>
-            <li>
-              <strong>Messages non lus</strong> — demandes clients en attente
-              de réponse.
-            </li>
-          </ul>
+        </CardHeader>
+        <CardContent className="space-y-6 text-sm leading-relaxed">
+          {/* Bloc 1 */}
+          <div className="rounded-lg border border-border/60 bg-secondary/30 p-4 space-y-2">
+            <p className="font-semibold flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-gold" />
+              Bloc 1 — Clients logés ou confirmés ce mois
+            </p>
+            <p className="text-muted-foreground">
+              Affiche le nombre de clients <strong>par type de logement</strong>
+              {" "}(Chambres, Studios, Appartement) pour le mois en cours.
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+              <li>
+                <strong>Sont comptés</strong>&nbsp;: les réservations avec le
+                statut <Badge variant="outline">Confirmée</Badge> ou{" "}
+                <Badge variant="outline">Logé ✓</Badge> dont la date d'arrivée
+                tombe dans le mois en cours.
+              </li>
+              <li>
+                <strong>Ne sont pas comptés</strong>&nbsp;: les{" "}
+                <Badge variant="outline">En attente de validation</Badge> ni
+                les <Badge variant="outline">Annulées</Badge>.
+              </li>
+            </ul>
+          </div>
+
+          {/* Bloc 2 */}
+          <div className="rounded-lg border border-border/60 bg-secondary/30 p-4 space-y-3">
+            <p className="font-semibold flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-gold" />
+              Bloc 2 — Analyse par type de logement
+            </p>
+            <p className="text-muted-foreground">
+              Ce bloc vous permet de croiser <strong>la période</strong>, le
+              <strong> statut</strong> et <strong>ce que vous voulez voir</strong>
+              {" "}(argent, nombre, encaissé, restant).
+            </p>
+
+            <div className="space-y-2">
+              <p className="font-semibold flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gold" /> Filtre Période
+              </p>
+              <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                <li>
+                  <strong>Par mois / année</strong> — vous sélectionnez un
+                  mois précis (ex&nbsp;: juin 2026).
+                </li>
+                <li>
+                  <strong>Période personnalisée</strong> — vous choisissez
+                  n'importe quel intervalle de dates (ex&nbsp;: du 5 au 20 du mois).
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <p className="font-semibold flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gold" /> Filtre Statut
+              </p>
+              <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                <li>
+                  <strong>Tous (hors annulés)</strong> — toutes les
+                  réservations actives. Vue globale par défaut.
+                </li>
+                <li>
+                  <strong>Confirmées</strong> — réservations confirmées dont
+                  le client n'est pas encore arrivé. C'est le revenu à venir.
+                </li>
+                <li>
+                  <strong>Logé ✓</strong> — clients actuellement présents,
+                  séjour en cours.
+                </li>
+                <li>
+                  <strong>Annulées</strong> — réservations annulées (montants
+                  ramenés à 0).
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <p className="font-semibold flex items-center gap-2">
+                <Filter className="h-4 w-4 text-gold" /> Filtre Afficher
+              </p>
+              <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                <li>
+                  <strong>Chiffre d'affaires</strong> — total des montants
+                  facturés prévus sur la période.
+                </li>
+                <li>
+                  <strong>Nombre de réservations</strong> — combien de
+                  réservations par type de logement.
+                </li>
+                <li>
+                  <strong>Encaissé</strong> — argent déjà reçu (avances et
+                  paiements enregistrés).
+                </li>
+                <li>
+                  <strong>Solde restant</strong> — ce qu'il reste à encaisser
+                  = <em>Chiffre d'affaires − Encaissé</em>.
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Conseils */}
+          <div className="rounded-lg border border-gold/30 bg-gold/5 p-4 space-y-2">
+            <p className="font-semibold flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-gold" />
+              Conseils de lecture rapide
+            </p>
+            <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+              <li>
+                <strong>Début de mois</strong> →{" "}
+                <em>Chiffre d'affaires – Tous</em> pour voir le potentiel
+                du mois.
+              </li>
+              <li>
+                <strong>En cours de mois</strong> → comparer{" "}
+                <em>Encaissé</em> vs <em>Chiffre d'affaires</em> pour
+                détecter les paiements manquants.
+              </li>
+              <li>
+                <strong>Avant un départ</strong> → filtrer{" "}
+                <em>Logé ✓</em> + <em>Solde restant</em> pour voir qui doit
+                encore payer.
+              </li>
+              <li>
+                <strong>Fin de mois</strong> → comparer les types de logement
+                pour voir lequel a le mieux performé.
+              </li>
+            </ul>
+          </div>
         </CardContent>
       </Card>
 
@@ -237,17 +343,6 @@ export function DocumentationAdmin() {
           <Separator />
 
           <TabDoc
-            icon={<Building2 className="h-4 w-4 text-gold" />}
-            title="Logements"
-          >
-            Gestion du catalogue&nbsp;: descriptions, photos, équipements,
-            tarifs, ainsi que la liste des unités physiques (numéros) et leur
-            disponibilité.
-          </TabDoc>
-
-          <Separator />
-
-          <TabDoc
             icon={<MessageSquare className="h-4 w-4 text-gold" />}
             title="Messages"
           >
@@ -263,16 +358,6 @@ export function DocumentationAdmin() {
           >
             Avis laissés par les clients. Vous pouvez modérer (publier /
             masquer) et répondre publiquement.
-          </TabDoc>
-
-          <Separator />
-
-          <TabDoc
-            icon={<UsersRound className="h-4 w-4 text-gold" />}
-            title="Administration (propriétaire uniquement)"
-          >
-            Gestion de l'équipe&nbsp;: ajout de gestionnaires, attribution des
-            rôles et permissions. Visible uniquement par le propriétaire.
           </TabDoc>
 
           <Separator />
@@ -303,7 +388,7 @@ export function DocumentationAdmin() {
             </li>
             <li>
               Aller dans <strong>Réservations</strong> — traiter les
-              <Badge variant="outline" className="mx-1">nouvelle</Badge>
+              <Badge variant="outline" className="mx-1">En attente de validation</Badge>
               (attribuer une unité, confirmer).
             </li>
             <li>
