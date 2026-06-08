@@ -119,8 +119,8 @@
   --cal-pending-fg: oklch(0.27 0.05 65);
   --cal-confirmed: oklch(0.58 0.14 250);
   --cal-confirmed-fg: oklch(0.98 0.01 250);
-  --cal-completed: oklch(0.6 0.16 150);
-  --cal-completed-fg: oklch(0.99 0 0);
+  --cal-completed: oklch(0.85 0.22 130);
+  --cal-completed-fg: oklch(0.22 0.05 130);
   --cal-maintenance: oklch(0.58 0.2 27);
   --cal-maintenance-fg: oklch(0.98 0.01 27);
   --cal-conflict: oklch(0.55 0.22 305);
