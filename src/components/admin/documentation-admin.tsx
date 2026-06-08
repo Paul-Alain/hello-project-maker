@@ -268,34 +268,6 @@ export function DocumentationAdmin() {
             </div>
           </div>
 
-          {/* Conseils */}
-          <div className="rounded-lg border border-gold/30 bg-gold/5 p-4 space-y-2">
-            <p className="font-semibold flex items-center gap-2">
-              <Lightbulb className="h-4 w-4 text-gold" />
-              Conseils de lecture rapide
-            </p>
-            <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-              <li>
-                <strong>Début de mois</strong> →{" "}
-                <em>Chiffre d'affaires – Tous</em> pour voir le potentiel
-                du mois.
-              </li>
-              <li>
-                <strong>En cours de mois</strong> → comparer{" "}
-                <em>Encaissé</em> vs <em>Chiffre d'affaires</em> pour
-                détecter les paiements manquants.
-              </li>
-              <li>
-                <strong>Avant un départ</strong> → filtrer{" "}
-                <em>Logé ✓</em> + <em>Solde restant</em> pour voir qui doit
-                encore payer.
-              </li>
-              <li>
-                <strong>Fin de mois</strong> → comparer les types de logement
-                pour voir lequel a le mieux performé.
-              </li>
-            </ul>
-          </div>
         </CardContent>
       </Card>
 
