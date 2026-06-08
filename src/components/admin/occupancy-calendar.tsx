@@ -248,6 +248,23 @@ export function OccupancyCalendar({ readOnly = false }: { readOnly?: boolean }) 
                 })
                 .filter((b) => b.endIdx > b.startIdx && b.startIdx < WINDOW && b.endIdx > 0);
 
+              // Assign vertical lanes so overlapping bars are visibly separated
+              const sortedBars = [...bars].sort((a, b) => a.startIdx - b.startIdx);
+              const laneEnds: number[] = [];
+              const laneOf = new Map<string, number>();
+              for (const b of sortedBars) {
+                let lane = laneEnds.findIndex((end) => end <= b.startIdx);
+                if (lane === -1) {
+                  lane = laneEnds.length;
+                  laneEnds.push(b.endIdx);
+                } else {
+                  laneEnds[lane] = b.endIdx;
+                }
+                laneOf.set(b.r.id, lane);
+              }
+              const laneCount = Math.max(1, laneEnds.length);
+              const rowH = laneCount > 1 ? 48 + (laneCount - 1) * 6 : 48;
+
               return (
                 <div key={unit.id} className="flex border-b border-border/40 last:border-b-0">
                   {/* Unit label */}
@@ -260,7 +277,7 @@ export function OccupancyCalendar({ readOnly = false }: { readOnly?: boolean }) 
                   </div>
 
                   {/* Day cells + bars */}
-                  <div className="relative" style={{ width: trackW, height: 48 }}>
+                  <div className="relative" style={{ width: trackW, height: rowH }}>
                     {/* Background cells */}
                     <div className="absolute inset-0 flex">
                       {days.map((d) => {
@@ -287,15 +304,20 @@ export function OccupancyCalendar({ readOnly = false }: { readOnly?: boolean }) 
                           dateTimeMsCam(r.departure_date, r.departure_time, "11:00"),
                         ),
                       );
+                      const lane = laneOf.get(r.id) ?? 0;
+                      const topOffset = 4 + lane * 6;
+                      const bottomOffset = 4 + (laneCount - 1 - lane) * 6;
                       return (
                         <button
                           key={r.id}
                           type="button"
                           onClick={() => !readOnly && setEditing(calToEditable(r))}
-                          className={`absolute top-1 bottom-1 flex flex-col justify-center overflow-hidden rounded-md px-1.5 text-left shadow-sm transition hover:brightness-105 ${barClass(r)} ${readOnly ? "cursor-default" : "cursor-pointer"}`}
+                          className={`absolute flex flex-col justify-center overflow-hidden rounded-md border border-background/60 px-1.5 text-left shadow-sm transition hover:brightness-105 ${barClass(r)} ${readOnly ? "cursor-default" : "cursor-pointer"}`}
                           style={{
                             left: startIdx * DAY_W + 2,
                             width: (endIdx - startIdx) * DAY_W - 4,
+                            top: topOffset,
+                            bottom: bottomOffset,
                           }}
                           title={`${r.name} · ${fmtShort(r.arrival_date)} → ${fmtShort(r.departure_date)}`}
                         >
