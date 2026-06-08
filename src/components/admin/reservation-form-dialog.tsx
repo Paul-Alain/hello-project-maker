@@ -198,8 +198,9 @@ export function ReservationFormDialog({
   const guestsNum      = Number(form.guests) || 0;
   const guestsExceeded = maxGuests !== undefined && guestsNum > maxGuests;
 
+  // Utiliser UTC+1 (Cameroun) pour toutes les comparaisons de dates
   const toDateTime = (date: string, time: string) =>
-    date ? new Date(`${date}T${time || "00:00"}:00`) : null;
+    date ? new Date(`${date}T${time || "00:00"}:00+01:00`) : null;
   const arrivalDT   = toDateTime(form.arrival, form.arrivalTime);
   const departureDT = toDateTime(form.departure, form.departureTime);
   const departureBeforeArrival =
