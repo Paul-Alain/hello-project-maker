@@ -143,6 +143,25 @@ export function ReservationFormDialog({
     staleTime: 60_000,
   });
 
+  // Load physical units for manual assignment by manager
+  const { data: allUnits = [] } = useQuery({
+    queryKey: ["logement-units-all"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("logement_units")
+        .select("id, label, sort_order, available, op_status, logements(type)")
+        .order("sort_order", { ascending: true });
+      return (data ?? []).map((u: any) => ({
+        id: u.id as string,
+        label: u.label as string,
+        type: (u.logements?.type as string) ?? "",
+        available: !!u.available,
+        op_status: (u.op_status as string) ?? "actif",
+      }));
+    },
+    staleTime: 60_000,
+  });
+
   const empty = {
     name:           "",
     phone:          "",
