@@ -59,11 +59,13 @@ interface ResRow {
   created_at?: string;
 }
 
-// Cameroun = UTC+1 (Africa/Douala) — toutes les comparaisons de dates utilisent cette référence
-const CAMEROUN_OFFSET_MS = 1 * 60 * 60 * 1000; // UTC+1
-
+// Cameroun = UTC+1 (Africa/Douala) — pas de DST.
+// dateTimeMs() renvoie un timestamp UTC absolu (suffixe +01:00), donc la
+// référence "maintenant" doit elle aussi être un timestamp UTC absolu :
+// Date.now() est correct et identique côté client (nowCam) et serveur,
+// indépendamment de la timezone de l'hôte.
 function nowCameroun(): number {
-  return Date.now() + CAMEROUN_OFFSET_MS - new Date().getTimezoneOffset() * 60_000;
+  return Date.now();
 }
 
 function todayLocalIso(): string {
