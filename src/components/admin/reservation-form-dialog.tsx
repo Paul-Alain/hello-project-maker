@@ -318,7 +318,7 @@ export function ReservationFormDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {locked ? (
+        {locked || logeFullyLocked ? (
           /* ── READ-ONLY VIEW for logé / annulée ── */
           <div className="space-y-4 text-sm">
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700">
@@ -336,6 +336,45 @@ export function ReservationFormDialog({
             <ReadOnlyField label="Avance"       value={formatMoney(reservation!.advance, residence.currency)} />
             <ReadOnlyField label="Solde"        value={formatMoney(Math.max(0, (reservation!.total_amount ?? 0) - reservation!.advance), residence.currency)} />
             {reservation!.notes && <ReadOnlyField label="Notes" value={reservation!.notes ?? ""} />}
+          </div>
+        ) : advanceOnlyMode ? (
+          /* ── LOGÉ avec solde > 0 : seule l'avance est modifiable ── */
+          <div className="space-y-4 text-sm">
+            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700">
+              <Lock className="mr-1 inline h-3 w-3" />
+              Client logé — seul le champ « Ajouter une avance » est modifiable.
+            </div>
+            <ReadOnlyField label="Client"    value={reservation!.name} />
+            <ReadOnlyField label="Téléphone" value={reservation!.phone} />
+            <ReadOnlyField label="E-mail"    value={reservation!.email ?? "—"} />
+            <ReadOnlyField label="Type"      value={TYPE_LABELS[reservation!.logement_type as LogementType] ?? "—"} />
+            <ReadOnlyField label="Personnes" value={String(reservation!.guests)} />
+            <ReadOnlyField label="Arrivée"   value={`${reservation!.arrival_date} à ${reservation!.arrival_time}`} />
+            <ReadOnlyField label="Départ"    value={`${reservation!.departure_date} à ${reservation!.departure_time}`} />
+            <ReadOnlyField label="Total"     value={formatMoney(reservation!.total_amount ?? 0, residence.currency)} />
+            <ReadOnlyField label="Avance actuelle" value={formatMoney(baseAdvance, residence.currency)} />
+            <ReadOnlyField label="Solde restant"   value={formatMoney(balance, residence.currency)} />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="nr-add-advance">Ajouter une avance</Label>
+                <Input id="nr-add-advance" type="number" min={0} inputMode="numeric"
+                  value={form.addAdvance} onChange={(e) => set("addAdvance", e.target.value)}
+                  placeholder="0" />
+                <p className="text-[11px] text-muted-foreground">Montant encaissé maintenant.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Nouvelle avance totale</Label>
+                <Input readOnly value={formatMoney(advanceNum, residence.currency)}
+                  className="bg-secondary/40 font-semibold" tabIndex={-1} />
+              </div>
+            </div>
+
+            <Button variant="gold" size="lg" className="w-full"
+              disabled={busy || addedAdvance <= 0} onClick={submit}>
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <CalendarCheck className="h-5 w-5" />}
+              Enregistrer l'avance
+            </Button>
           </div>
         ) : (
           /* ── EDITABLE FORM ── */
