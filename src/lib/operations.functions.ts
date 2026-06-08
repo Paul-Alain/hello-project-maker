@@ -1313,7 +1313,7 @@ export const opSetTeamRole = createServerFn({ method: "POST" })
         if ((u.email ?? "").toLowerCase() === id) return true;
         if (id.replace(/\D/g, "").length >= 6 && (u.phone ?? "").replace(/\D/g, "") === id.replace(/\D/g, ""))
           return true;
-        const meta = u.user_metadata ?? u.raw_user_meta_data ?? {};
+        const meta = (u.user_metadata ?? (u as any).raw_user_meta_data ?? {}) as Record<string, string | undefined>;
         const fullName = (meta.full_name ?? meta.name ?? meta.display_name ?? "").toLowerCase().trim();
         if (fullName && fullName === id) return true;
         if (fullName && fullName.includes(id)) return true;
@@ -1362,7 +1362,7 @@ export const opReplaceManager = createServerFn({ method: "POST" })
         if ((u.email ?? "").toLowerCase() === id) return true;
         if (id.replace(/\D/g, "").length >= 6 && (u.phone ?? "").replace(/\D/g, "") === id.replace(/\D/g, ""))
           return true;
-        const meta = u.user_metadata ?? u.raw_user_meta_data ?? {};
+        const meta = (u.user_metadata ?? (u as any).raw_user_meta_data ?? {}) as Record<string, string | undefined>;
         const fullName = (meta.full_name ?? meta.name ?? meta.display_name ?? "").toLowerCase().trim();
         if (fullName && fullName === id) return true;
         if (fullName && fullName.includes(id)) return true;
