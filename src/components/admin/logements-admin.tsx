@@ -1,44 +1,15 @@
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { LogementEditor } from "@/components/admin/logement-editor";
-import { adminDeleteLogement } from "@/lib/admin.functions";
 import { logementsQuery, formatPrice, type Logement } from "@/lib/data";
 
 export function LogementsAdmin({ readOnly = false }: { readOnly?: boolean }) {
-  const qc = useQueryClient();
   const { data: logements = [], isLoading } = useQuery(logementsQuery);
-  const [editing, setEditing] = useState<Logement | null>(null);
+  const [editing] = useState<Logement | null>(null);
   const [open, setOpen] = useState(false);
-  const runDeleteLogement = useServerFn(adminDeleteLogement);
-
-  const refresh = () => qc.invalidateQueries({ queryKey: ["logements"] });
-
-  const remove = async (id: string) => {
-    try {
-      await runDeleteLogement({ data: { id } });
-    } catch {
-      toast.error("Suppression refusée.");
-      return;
-    }
-    toast.success("Logement supprimé.");
-    refresh();
-  };
+  const refresh = () => {};
 
   return (
     <div>
