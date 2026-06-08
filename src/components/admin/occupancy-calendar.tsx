@@ -243,7 +243,9 @@ export function OccupancyCalendar({ readOnly = false }: { readOnly?: boolean }) 
                 .filter((r) => r.logement_unit_id === unit.id && r.status !== BLOCK_STATUS)
                 .map((r) => {
                   const startIdx = Math.max(0, dayDiff(start, r.arrival_date));
-                  const endIdx = Math.min(WINDOW, dayDiff(start, r.departure_date));
+                  const rawEnd = dayDiff(start, r.departure_date);
+                  // Séjour d'un seul jour (arrivée = départ) : forcer une largeur d'au moins 1 jour
+                  const endIdx = Math.min(WINDOW, Math.max(rawEnd, startIdx + 1));
                   return { r, startIdx, endIdx };
                 })
                 .filter((b) => b.endIdx > b.startIdx && b.startIdx < WINDOW && b.endIdx > 0);
