@@ -67,8 +67,12 @@ function nowCameroun(): number {
 }
 
 function todayLocalIso(): string {
-  const utc = Date.now() + CAMEROUN_OFFSET_MS;
-  return new Date(utc).toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Douala",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 function dateTimeMs(date: string, time: string | null | undefined, fallback: string): number {
@@ -1545,9 +1549,13 @@ export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
     const rows = reservations
       .filter((r) => r.status !== BLOCK_STATUS && inRange(r.arrival_date))
       .map((r) => {
-        const total = effectiveTotal(r, priceOf(r));
-        const advance = Math.min(Number(r.advance_amount) || 0, total);
-        // Utiliser le fuseau Cameroun (UTC+1) pour cohérence avec reservations-admin
+        const isAnnulee = r.status === "annulée";
+        // Annulées → montants à 0. Autres → calcul normal.
+        const rawTotal = Number(r.total_amount);
+        const rawAdvance = Number(r.advance_amount);
+        const autoTotal = effectiveTotal(r, priceOf(r));
+        const total = isAnnulee ? 0 : Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
+        const advance = isAnnulee ? 0 : Math.min(rawAdvance || 0, total);
         const arrivalMs = new Date(
           `${r.arrival_date}T${(r.arrival_time ?? DEFAULT_CHECKIN_TIME).slice(0, 5)}:00+01:00`,
         ).getTime();
@@ -1556,7 +1564,6 @@ export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
         ).getTime();
         return {
           type: r.logement_type ?? "",
-          // displayReservationStatus retourne exactement : nouvelle | confirmée | logé | annulée
           status: displayReservationStatus(r.status, arrivalMs, departureMs, nowMs) as string,
           total,
           collected: advance,
@@ -1569,7 +1576,12 @@ export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
     > = {};
     for (const status of STATUSES) {
       byStatus[status] = TYPES.map((type) => {
-        const rs = rows.filter((x) => x.type === type && (status === "all" || x.status === status));
+        const rs = rows.filter((x) => {
+          if (x.type !== type) return false;
+          // "all" = tous sauf annulées (cohérent avec le label "Tous hors annulés")
+          if (status === "all") return x.status !== "annulée";
+          return x.status === status;
+        });
         return {
           type,
           label: typeLabels[type],
