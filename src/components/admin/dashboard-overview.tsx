@@ -134,20 +134,29 @@ export function DashboardOverview() {
   });
 
   // ── Compute occupancy ────────────────────────────────────────────────
-  const occupancyByType = useMemo(() => {
-    const cards = dash?.units ?? [];
-    const byType: Record<string, { occupied: number; total: number }> = {
-      chambre: { occupied: 0, total: 0 },
-      studio: { occupied: 0, total: 0 },
-      appartement: { occupied: 0, total: 0 },
-    };
-    for (const c of cards) {
-      if (!byType[c.type]) continue;
-      byType[c.type].total++;
-      if (c.status === "occupee" || c.status === "depart") byType[c.type].occupied++;
+  // ── Clients logés / confirmés depuis le début du mois en cours ───────
+  const currentMonthRange = useMemo(
+    () => monthRange(now.getFullYear(), now.getMonth() + 1),
+    [now.getFullYear(), now.getMonth()],
+  );
+
+  const { data: monthRev } = useQuery({
+    queryKey: ["op-revenue-current-month", currentMonthRange.start, currentMonthRange.end],
+    queryFn: () => runRevenue({ data: currentMonthRange }),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const clientsByType = useMemo(() => {
+    const byType: Record<string, number> = { chambre: 0, studio: 0, appartement: 0 };
+    const confirmed = monthRev?.byStatus?.["confirmée"] ?? [];
+    const loge = monthRev?.byStatus?.["logé"] ?? [];
+    for (const r of [...confirmed, ...loge]) {
+      if (byType[r.type] === undefined) continue;
+      byType[r.type] += r.count ?? 0;
     }
     return byType;
-  }, [dash]);
+  }, [monthRev]);
 
   // ── Chart data ───────────────────────────────────────────────────────
   // Mapping direct : les clés de byStatus sont maintenant identiques aux displayStatus
