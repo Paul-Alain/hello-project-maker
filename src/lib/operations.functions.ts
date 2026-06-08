@@ -955,6 +955,10 @@ const reservationFormBase = z.object({
   notes: z.string().max(1000).optional(),
 });
 
+const reservationFormBaseWithUnit = reservationFormBase.extend({
+  unitId: UUID.nullable().optional(),
+});
+
 const departureAfterArrival = (v: {
   arrival: string;
   departure: string;
@@ -975,12 +979,12 @@ const amountsValid = (v: { advance?: number; totalAmount?: number }) => {
   return true;
 };
 
-const reservationFormSchema = reservationFormBase
+const reservationFormSchema = reservationFormBaseWithUnit
   .refine(departureAfterArrival, { message: "La date/heure de départ doit suivre l'arrivée." })
   .refine(guestsWithinCapacity, { message: "Le nombre de personnes dépasse la capacité maximale de ce logement." })
   .refine(amountsValid, { message: "Les montants ne peuvent pas être négatifs." });
 
-const reservationUpdateSchema = reservationFormBase
+const reservationUpdateSchema = reservationFormBaseWithUnit
   .extend({ id: UUID })
   .refine(departureAfterArrival, { message: "La date/heure de départ doit suivre l'arrivée." })
   .refine(guestsWithinCapacity, { message: "Le nombre de personnes dépasse la capacité maximale de ce logement." })
