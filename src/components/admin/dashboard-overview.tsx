@@ -34,9 +34,16 @@ const TYPE_LABELS: Record<string, string> = {
 const BAR_COLOR = "#1d4ed8"; // blue-700
 
 // ── Date helpers ─────────────────────────────────────────────────────────
-function isoDay(d: Date) {
-  return todayCam();
-} // utilise l'heure Cameroun
+function isoDay(d: Date): string {
+  // Convertit la date donnée en YYYY-MM-DD selon le fuseau Cameroun
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Douala",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
 function monthRange(year: number, month: number) {
   const start = `${year}-${String(month).padStart(2, "0")}-01`;
   const last = new Date(year, month, 0).getDate();
@@ -81,9 +88,24 @@ export function DashboardOverview() {
     refetchOnWindowFocus: true,
   });
 
-  // ── Dismissed urgent IDs ─────────────────────────────────────────────
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const dismiss = (id: string) => setDismissed((s) => new Set([...s, id]));
+  // ── Dismissed urgent IDs (persistés dans localStorage) ───────────────
+  const [dismissed, setDismissed] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem("pp-dismissed-urgent");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const dismiss = (id: string) => {
+    setDismissed((s) => {
+      const next = new Set([...s, id]);
+      try {
+        localStorage.setItem("pp-dismissed-urgent", JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  };
 
   // ── Chart filters ────────────────────────────────────────────────────
   const [filterMode, setFilterMode] = useState<FilterMode>("month-year");
@@ -107,16 +129,7 @@ export function DashboardOverview() {
   });
 
   // ── Compute occupancy from reservations ──────────────────────────────
-  // A unit is occupied if its reservation period includes now AND status = confirmée
   const occupancyByType = useMemo(() => {
-    const today = isoDay(now);
-    const allRes = [
-      ...(dash?.arrivals ?? []),
-      ...(dash?.departures ?? []),
-      ...(dash?.upcomingArrivals ?? []),
-      ...(dash?.upcomingDepartures ?? []),
-    ];
-    // Use unitCards from dashboard which already has status computed
     const cards = dash?.units ?? [];
     const byType: Record<string, { occupied: number; total: number }> = {
       chambre: { occupied: 0, total: 0 },
@@ -126,7 +139,6 @@ export function DashboardOverview() {
     for (const c of cards) {
       if (!byType[c.type]) continue;
       byType[c.type].total++;
-      // Occupied = status occupee or depart (client still there)
       if (c.status === "occupee" || c.status === "depart") {
         byType[c.type].occupied++;
       }
@@ -135,18 +147,14 @@ export function DashboardOverview() {
   }, [dash]);
 
   // ── Chart data ───────────────────────────────────────────────────────
-  // Map our StatusKey to the keys used by opGetRevenueAnalytics
   const revStatusKey = useMemo(() => {
-    // opGetRevenueAnalytics uses: all, nouvelle, confirmée, encours, terminée
-    // We expose: all, confirmée, logé (=encours+terminée), annulée
-    if (statusFilter === "logé") return "encours"; // best proxy
-    if (statusFilter === "annulée") return "all"; // handled below
+    if (statusFilter === "logé") return "encours";
+    if (statusFilter === "annulée") return "all";
     return statusFilter;
   }, [statusFilter]);
 
   const rows = useMemo(() => {
     const base = rev?.byStatus?.[revStatusKey] ?? [];
-    // For annulée we want 0 (annulées are excluded from analytics server-side)
     if (statusFilter === "annulée") {
       return base.map((r) => ({ ...r, total: 0, collected: 0, balance: 0, count: 0 }));
     }
@@ -182,7 +190,6 @@ export function DashboardOverview() {
   const urgentArrivals = useMemo(() => {
     const in30h = nowMs + 30 * 60 * 60 * 1000;
     const allRes = [...(dash?.arrivals ?? []), ...(dash?.upcomingArrivals ?? [])];
-    // Deduplicate by id
     const seen = new Set<string>();
     return allRes.filter((r) => {
       if (seen.has(r.id)) return false;
@@ -311,6 +318,16 @@ export function DashboardOverview() {
               <Button size="sm" variant={metric === "count" ? "gold" : "outline"} onClick={() => setMetric("count")}>
                 Nombre de réservations
               </Button>
+              <Button
+                size="sm"
+                variant={metric === "encaisse" ? "gold" : "outline"}
+                onClick={() => setMetric("encaisse")}
+              >
+                Encaissé
+              </Button>
+              <Button size="sm" variant={metric === "solde" ? "gold" : "outline"} onClick={() => setMetric("solde")}>
+                Solde restant
+              </Button>
             </div>
           </div>
         </div>
@@ -321,7 +338,7 @@ export function DashboardOverview() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Aggregate card 3D */}
+            {/* Aggregate card */}
             <AggregateCard
               label={aggregate.label}
               value={metric === "count" ? String(aggregate.value) : money(aggregate.value)}
