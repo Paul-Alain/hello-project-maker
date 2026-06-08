@@ -955,6 +955,10 @@ const reservationFormBase = z.object({
   notes: z.string().max(1000).optional(),
 });
 
+const reservationFormBaseWithUnit = reservationFormBase.extend({
+  unitId: UUID.nullable().optional(),
+});
+
 const departureAfterArrival = (v: {
   arrival: string;
   departure: string;
@@ -975,12 +979,12 @@ const amountsValid = (v: { advance?: number; totalAmount?: number }) => {
   return true;
 };
 
-const reservationFormSchema = reservationFormBase
+const reservationFormSchema = reservationFormBaseWithUnit
   .refine(departureAfterArrival, { message: "La date/heure de départ doit suivre l'arrivée." })
   .refine(guestsWithinCapacity, { message: "Le nombre de personnes dépasse la capacité maximale de ce logement." })
   .refine(amountsValid, { message: "Les montants ne peuvent pas être négatifs." });
 
-const reservationUpdateSchema = reservationFormBase
+const reservationUpdateSchema = reservationFormBaseWithUnit
   .extend({ id: UUID })
   .refine(departureAfterArrival, { message: "La date/heure de départ doit suivre l'arrivée." })
   .refine(guestsWithinCapacity, { message: "Le nombre de personnes dépasse la capacité maximale de ce logement." })
@@ -1031,15 +1035,26 @@ export const opCreateReservation = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
-    const unitId = await pickFreeUnit(
-      sb,
-      data.logementType,
-      data.arrival,
-      data.departure,
-      undefined,
-      data.arrivalTime ?? DEFAULT_CHECKIN_TIME,
-      data.departureTime ?? DEFAULT_CHECKOUT_TIME,
-    );
+    let unitId: string | null = null;
+    if (data.unitId) {
+      const allUnits = await loadUnits(sb);
+      const chosen = allUnits.find((u) => u.id === data.unitId);
+      if (!chosen) throw new Error("Unité introuvable.");
+      if (chosen.type !== data.logementType)
+        throw new Error("L'unité choisie ne correspond pas au type de logement.");
+      await ensureNoConflict(sb, data.unitId, data.arrival, data.departure, "00000000-0000-0000-0000-000000000000");
+      unitId = data.unitId;
+    } else {
+      unitId = await pickFreeUnit(
+        sb,
+        data.logementType,
+        data.arrival,
+        data.departure,
+        undefined,
+        data.arrivalTime ?? DEFAULT_CHECKIN_TIME,
+        data.departureTime ?? DEFAULT_CHECKOUT_TIME,
+      );
+    }
     const { data: inserted, error } = await sb
       .from("reservations")
       .insert({
@@ -1085,21 +1100,35 @@ export const opUpdateReservation = createServerFn({ method: "POST" })
       .select("logement_unit_id, logement_type")
       .eq("id", data.id)
       .single();
-    const unitRow = existing?.logement_unit_id
-      ? (await loadUnits(sb)).find((u) => u.id === existing.logement_unit_id)
-      : undefined;
-    const needsUnit = !existing?.logement_unit_id || (unitRow && unitRow.type !== data.logementType);
-    const newUnitId = needsUnit
-      ? await pickFreeUnit(
-          sb,
-          data.logementType,
-          data.arrival,
-          data.departure,
-          data.id,
-          data.arrivalTime ?? DEFAULT_CHECKIN_TIME,
-          data.departureTime ?? DEFAULT_CHECKOUT_TIME,
-        )
-      : (existing?.logement_unit_id ?? null);
+    let newUnitId: string | null;
+    if (data.unitId !== undefined) {
+      // Manager explicitly chose an assignment (string id or null to unassign).
+      if (data.unitId) {
+        const allUnits = await loadUnits(sb);
+        const chosen = allUnits.find((u) => u.id === data.unitId);
+        if (!chosen) throw new Error("Unité introuvable.");
+        if (chosen.type !== data.logementType)
+          throw new Error("L'unité choisie ne correspond pas au type de logement.");
+        await ensureNoConflict(sb, data.unitId, data.arrival, data.departure, data.id);
+      }
+      newUnitId = data.unitId;
+    } else {
+      const unitRow = existing?.logement_unit_id
+        ? (await loadUnits(sb)).find((u) => u.id === existing.logement_unit_id)
+        : undefined;
+      const needsUnit = !existing?.logement_unit_id || (unitRow && unitRow.type !== data.logementType);
+      newUnitId = needsUnit
+        ? await pickFreeUnit(
+            sb,
+            data.logementType,
+            data.arrival,
+            data.departure,
+            data.id,
+            data.arrivalTime ?? DEFAULT_CHECKIN_TIME,
+            data.departureTime ?? DEFAULT_CHECKOUT_TIME,
+          )
+        : (existing?.logement_unit_id ?? null);
+    }
     const { error } = await sb
       .from("reservations")
       .update({

@@ -92,6 +92,7 @@ function toEditable(r: ResItem): EditableReservation {
     total_amount: r.total,
     notes: r.notes ?? null,
     status: r.status,
+    unit_id: r.unitId ?? null,
   };
 }
 
