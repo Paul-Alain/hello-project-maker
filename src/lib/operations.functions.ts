@@ -990,6 +990,8 @@ async function pickFreeUnit(
   arrival: string,
   departure: string,
   excludeId = "00000000-0000-0000-0000-000000000000",
+  arrivalTime: string = DEFAULT_CHECKIN_TIME,
+  departureTime: string = DEFAULT_CHECKOUT_TIME,
 ): Promise<string | null> {
   const units = await loadUnits(sb);
   const candidates = units
@@ -999,14 +1001,21 @@ async function pickFreeUnit(
 
   const { data: active } = await sb
     .from("reservations")
-    .select("logement_unit_id, arrival_date, departure_date")
+    .select("logement_unit_id, arrival_date, departure_date, arrival_time, departure_time")
     .in("status", ["nouvelle", "confirmée", "checkin", "bloqué"])
     .neq("id", excludeId);
 
+  const toMs = (d: string, t: string | null, def: string) =>
+    new Date(`${d}T${(t ?? def).slice(0, 5)}:00`).getTime();
+  const reqStart = toMs(arrival, arrivalTime, DEFAULT_CHECKIN_TIME);
+  const reqEnd = toMs(departure, departureTime, DEFAULT_CHECKOUT_TIME);
   const overlaps = (unitId: string) =>
-    (active ?? []).some(
-      (r: any) => r.logement_unit_id === unitId && arrival < r.departure_date && r.arrival_date < departure,
-    );
+    (active ?? []).some((r: any) => {
+      if (r.logement_unit_id !== unitId) return false;
+      const rStart = toMs(r.arrival_date, r.arrival_time, DEFAULT_CHECKIN_TIME);
+      const rEnd = toMs(r.departure_date, r.departure_time, DEFAULT_CHECKOUT_TIME);
+      return reqStart < rEnd && rStart < reqEnd;
+    });
 
   for (const u of candidates) {
     if (!overlaps(u.id)) return u.id;
