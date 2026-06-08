@@ -5,18 +5,20 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import { encodeMessage, parseMessageMeta, stripMessageMeta } from "@/lib/data";
 
-// Server-side admin verification. Uses the request's authenticated, RLS-scoped
-// Supabase client and the has_role() security-definer function.
+// Server-side admin verification.
+// Accepte les rôles: admin, proprietaire, gestionnaire
 async function assertAdmin(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<void> {
-  const { data, error } = await supabase.rpc("has_role", {
-    _user_id: userId,
-    _role: "admin",
-  });
-  if (error) throw new Error(error.message);
-  if (data !== true) throw new Error("Forbidden: admin role required");
+  const [{ data: isAdmin }, { data: isOwner }, { data: isManager }] = await Promise.all([
+    supabase.rpc("has_role", { _user_id: userId, _role: "admin" }),
+    supabase.rpc("has_role", { _user_id: userId, _role: "proprietaire" }),
+    supabase.rpc("has_role", { _user_id: userId, _role: "gestionnaire" }),
+  ]);
+  if (isAdmin !== true && isOwner !== true && isManager !== true) {
+    throw new Error("Forbidden: admin role required");
+  }
 }
 
 // Returns whether the current user is an admin (server-verified) plus the full
@@ -25,17 +27,15 @@ export const getAdminStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data, error } = await supabase.rpc("has_role", {
-      _user_id: userId,
-      _role: "admin",
-    });
-    if (error) throw new Error(error.message);
     const { data: roleRows } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId);
     const roles = (roleRows ?? []).map((r) => r.role as string);
-    return { isAdmin: data === true, roles };
+    const isAdmin = roles.includes("admin") || 
+                    roles.includes("proprietaire") || 
+                    roles.includes("gestionnaire");
+    return { isAdmin, roles };
   });
 
 // Grants admin to the very first signed-in user. This is an atomic, one-time
