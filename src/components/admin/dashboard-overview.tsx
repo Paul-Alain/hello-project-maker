@@ -151,17 +151,13 @@ export function DashboardOverview() {
   }, [dash]);
 
   // ── Chart data ───────────────────────────────────────────────────────
-  const revStatusKey = useMemo(() => {
-    if (statusFilter === "logé") return "encours";
-    if (statusFilter === "annulée") return "all";
-    return statusFilter;
-  }, [statusFilter]);
+  // Mapping direct : les clés de byStatus sont maintenant identiques aux displayStatus
+  // "all" | "nouvelle" | "confirmée" | "logé" | "annulée"
+  const revStatusKey = useMemo(() => statusFilter, [statusFilter]);
 
   const rows = useMemo(() => {
-    const base = rev?.byStatus?.[revStatusKey] ?? [];
-    if (statusFilter === "annulée") return base.map((r) => ({ ...r, total: 0, collected: 0, balance: 0, count: 0 }));
-    return base;
-  }, [rev, revStatusKey, statusFilter]);
+    return rev?.byStatus?.[revStatusKey] ?? [];
+  }, [rev, revStatusKey]);
 
   const metricValue = (r: any) => {
     if (metric === "revenue") return r.total ?? 0;
