@@ -134,20 +134,29 @@ export function DashboardOverview() {
   });
 
   // ── Compute occupancy ────────────────────────────────────────────────
-  const occupancyByType = useMemo(() => {
-    const cards = dash?.units ?? [];
-    const byType: Record<string, { occupied: number; total: number }> = {
-      chambre: { occupied: 0, total: 0 },
-      studio: { occupied: 0, total: 0 },
-      appartement: { occupied: 0, total: 0 },
-    };
-    for (const c of cards) {
-      if (!byType[c.type]) continue;
-      byType[c.type].total++;
-      if (c.status === "occupee" || c.status === "depart") byType[c.type].occupied++;
+  // ── Clients logés / confirmés depuis le début du mois en cours ───────
+  const currentMonthRange = useMemo(
+    () => monthRange(now.getFullYear(), now.getMonth() + 1),
+    [now.getFullYear(), now.getMonth()],
+  );
+
+  const { data: monthRev } = useQuery({
+    queryKey: ["op-revenue-current-month", currentMonthRange.start, currentMonthRange.end],
+    queryFn: () => runRevenue({ data: currentMonthRange }),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const clientsByType = useMemo(() => {
+    const byType: Record<string, number> = { chambre: 0, studio: 0, appartement: 0 };
+    const confirmed = monthRev?.byStatus?.["confirmée"] ?? [];
+    const loge = monthRev?.byStatus?.["logé"] ?? [];
+    for (const r of [...confirmed, ...loge]) {
+      if (byType[r.type] === undefined) continue;
+      byType[r.type] += r.count ?? 0;
     }
     return byType;
-  }, [dash]);
+  }, [monthRev]);
 
   // ── Chart data ───────────────────────────────────────────────────────
   // Mapping direct : les clés de byStatus sont maintenant identiques aux displayStatus
@@ -208,12 +217,13 @@ export function DashboardOverview() {
     <div className="space-y-8">
       {/* ── 1. CARTES OCCUPATION EN TEMPS RÉEL ── */}
       <section className="space-y-3">
-        <h2 className="font-display text-lg font-bold">Disponibilité à l'instant présent</h2>
+        <h2 className="font-display text-lg font-bold">
+          Clients logés ou confirmés depuis le début du mois
+        </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {(["chambre", "studio", "appartement"] as const).map((type) => {
-            const { occupied, total } = occupancyByType[type] ?? { occupied: 0, total: 0 };
-            const free = total - occupied;
-            return <OccupancyCard key={type} label={TYPE_LABELS[type]} occupied={occupied} total={total} free={free} />;
+            const count = clientsByType[type] ?? 0;
+            return <ClientsMonthCard key={type} label={TYPE_LABELS[type]} count={count} />;
           })}
         </div>
       </section>
@@ -451,6 +461,21 @@ export function DashboardOverview() {
 }
 
 // ── Sous-composants ───────────────────────────────────────────────────────
+function ClientsMonthCard({ label, count }: { label: string; count: number }) {
+  return (
+    <div
+      className="rounded-2xl bg-amber-800 p-5 text-white"
+      style={{ boxShadow: "4px 4px 0 0 #000, 6px 6px 0 0 rgba(0,0,0,0.3)", border: "3px solid #000" }}
+    >
+      <p className="text-sm font-semibold opacity-90">{label}</p>
+      <p className="mt-3 font-display text-4xl font-bold tabular-nums leading-none">{count}</p>
+      <p className="mt-2 text-xs opacity-80">
+        client{count > 1 ? "s" : ""} logé{count > 1 ? "s" : ""} ou confirmé{count > 1 ? "s" : ""} ce mois-ci
+      </p>
+    </div>
+  );
+}
+
 function OccupancyCard({
   label,
   occupied,
