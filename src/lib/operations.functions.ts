@@ -1541,7 +1541,7 @@ export const opGetRevenueAnalytics = createServerFn({ method: "GET" })
       (r.logement_type ? priceByType.get(r.logement_type) : undefined) ??
       0;
     const inRange = (d: string) => d >= data.start && d <= data.end;
-    const nowMs = Date.now();
+    const nowMs = nowCameroun();
     const TYPES = ["chambre", "studio", "appartement"] as const;
     const typeLabels: Record<string, string> = { chambre: "Chambre", studio: "Studio", appartement: "Appartement" };
     // Statuts alignés sur displayReservationStatus() : "nouvelle" | "confirmée" | "logé" | "annulée"
