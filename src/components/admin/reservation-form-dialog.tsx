@@ -65,6 +65,7 @@ export interface EditableReservation {
   total_amount?: number;
   notes?: string | null;
   status?: string;
+  unit_id?: string | null;
 }
 
 function Req() {
@@ -156,6 +157,7 @@ export function ReservationFormDialog({
     addAdvance:     "0",
     notes:          "",
     customUnitPrice: "", // empty = use default price
+    unitId:         "", // empty = auto-assign on server
   };
 
   const [form, setForm] = useState(empty);
@@ -197,6 +199,7 @@ export function ReservationFormDialog({
         addAdvance:     "0",
         notes:          reservation.notes ?? "",
         customUnitPrice: customUnit,
+        unitId:         reservation.unit_id ?? "",
       });
     } else {
       setForm(empty);
