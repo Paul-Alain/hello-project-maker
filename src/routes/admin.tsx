@@ -14,6 +14,7 @@ import {
   UsersRound,
   Building2,
 } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 
 import { Logo } from "@/components/brand/logo";
@@ -34,6 +35,7 @@ import { ReviewsAdmin } from "@/components/admin/reviews-admin";
 import { TeamAdmin } from "@/components/admin/team-admin";
 import { OccupancyCalendar } from "@/components/admin/occupancy-calendar";
 import { LogementsAdmin } from "@/components/admin/logements-admin";
+import { DocumentationAdmin } from "@/components/admin/documentation-admin";
 
 import { claimAdmin } from "@/lib/admin.functions";
 import { staffGetStatus } from "@/lib/operations.functions";
@@ -194,6 +196,7 @@ function AdminDashboard({ roles }: { roles: string[] }) {
     { value: "messages", label: "Messages", icon: MessageSquare },
     { value: "reviews", label: "Avis", icon: Star },
     ...(isOwner ? [{ value: "team", label: "Administration", icon: UsersRound }] : []),
+    { value: "documentation", label: "Documentation", icon: BookOpen },
   ];
 
   return (
@@ -238,6 +241,10 @@ function AdminDashboard({ roles }: { roles: string[] }) {
           <TeamAdmin />
         </TabsContent>
       )}
+
+      <TabsContent value="documentation" className="mt-6">
+        <DocumentationAdmin />
+      </TabsContent>
     </Tabs>
   );
 }
