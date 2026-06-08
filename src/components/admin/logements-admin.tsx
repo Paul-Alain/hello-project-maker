@@ -1,57 +1,21 @@
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { LogementEditor } from "@/components/admin/logement-editor";
-import { adminDeleteLogement } from "@/lib/admin.functions";
 import { logementsQuery, formatPrice, type Logement } from "@/lib/data";
 
 export function LogementsAdmin({ readOnly = false }: { readOnly?: boolean }) {
-  const qc = useQueryClient();
   const { data: logements = [], isLoading } = useQuery(logementsQuery);
-  const [editing, setEditing] = useState<Logement | null>(null);
+  const [editing] = useState<Logement | null>(null);
   const [open, setOpen] = useState(false);
-  const runDeleteLogement = useServerFn(adminDeleteLogement);
-
-  const refresh = () => qc.invalidateQueries({ queryKey: ["logements"] });
-
-  const remove = async (id: string) => {
-    try {
-      await runDeleteLogement({ data: { id } });
-    } catch {
-      toast.error("Suppression refusée.");
-      return;
-    }
-    toast.success("Logement supprimé.");
-    refresh();
-  };
+  const refresh = () => {};
 
   return (
     <div>
       {readOnly && (
         <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           <span>🔒</span> Mode lecture seule — propriétaire
-        </div>
-      )}
-      {!readOnly && (
-        <div className="mb-4 flex justify-end">
-          <Button variant="gold" onClick={() => { setEditing(null); setOpen(true); }}>
-            <Plus className="h-4 w-4" /> Ajouter
-          </Button>
         </div>
       )}
       {isLoading ? (
@@ -67,30 +31,6 @@ export function LogementsAdmin({ readOnly = false }: { readOnly?: boolean }) {
                   {!l.available && <Badge variant="destructive">Complet</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">{formatPrice(l.price, l.currency)} / {l.price_unit}</p>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                {!readOnly && (
-                  <>
-                    <Button variant="outline" size="icon" onClick={() => { setEditing(l); setOpen(true); }}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Supprimer ce logement ?</AlertDialogTitle>
-                      <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annuler</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => remove(l.id)}>Supprimer</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                  </>
-                )}
               </div>
             </div>
           ))}
