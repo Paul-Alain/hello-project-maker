@@ -586,7 +586,7 @@ export const opSetReservationStatus = createServerFn({ method: "POST" })
       await sb.from("payments").delete().eq("reservation_id", data.id);
     }
 
-    const { error } = await sb.from("reservations").update(patch).eq("id", data.id);
+    const { error } = await sb.from("reservations").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
 
     const name = await actorName(sb, context.userId);
