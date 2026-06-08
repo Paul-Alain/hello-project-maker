@@ -27,7 +27,6 @@ const STATUS_OPTIONS: { value: StatusKey; label: string }[] = [
   { value: "all", label: "Tous (hors annulés)" },
   { value: "confirmée", label: "Confirmées" },
   { value: "logé", label: "Logé ✓" },
-  { value: "annulée", label: "Annulées" },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -401,7 +400,7 @@ export function DashboardOverview() {
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold">
           <AlertTriangle className="h-5 w-5 text-amber-500" />
-          Actions urgentes
+          Arrivées prévues dans les prochaines 24 heures
           {urgentArrivals.length > 0 && <Badge variant="destructive">{urgentArrivals.length}</Badge>}
         </h2>
 

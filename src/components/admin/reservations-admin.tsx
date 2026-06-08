@@ -362,7 +362,9 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
                           {RES_STATUS_LABELS[r.displayStatus ?? "nouvelle"] ?? "En attente"}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">
+                      <td
+                        className={`px-3 py-2 text-right tabular-nums whitespace-nowrap ${r.balance === 0 ? "font-semibold text-blue-900" : ""}`}
+                      >
                         {formatMoney(r.total, residence.currency)}
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap text-emerald-600">
