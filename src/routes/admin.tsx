@@ -11,7 +11,6 @@ import {
   CalendarDays,
   MessageSquare,
   Star,
-  Contact,
   UsersRound,
   Building2,
 } from "lucide-react";
@@ -31,7 +30,7 @@ import { DashboardOverview } from "@/components/admin/dashboard-overview";
 import { ReservationsAdmin } from "@/components/admin/reservations-admin";
 import { MessagesAdmin } from "@/components/admin/messages-admin";
 import { ReviewsAdmin } from "@/components/admin/reviews-admin";
-import { ClientsAdmin } from "@/components/admin/clients-admin";
+
 import { TeamAdmin } from "@/components/admin/team-admin";
 import { OccupancyCalendar } from "@/components/admin/occupancy-calendar";
 import { LogementsAdmin } from "@/components/admin/logements-admin";
@@ -192,7 +191,6 @@ function AdminDashboard({ roles }: { roles: string[] }) {
     { value: "reservations", label: "Réservations", icon: CalendarDays },
     { value: "calendar", label: "Calendrier", icon: CalendarDays },
     { value: "logements", label: "Logements", icon: Building2 },
-    { value: "clients", label: "Clients", icon: Contact },
     { value: "messages", label: "Messages", icon: MessageSquare },
     { value: "reviews", label: "Avis", icon: Star },
     ...(isOwner ? [{ value: "team", label: "Administration", icon: UsersRound }] : []),
@@ -225,10 +223,6 @@ function AdminDashboard({ roles }: { roles: string[] }) {
 
       <TabsContent value="logements" className="mt-6">
         <LogementsAdmin readOnly={isOwner} />
-      </TabsContent>
-
-      <TabsContent value="clients" className="mt-6">
-        <ClientsAdmin />
       </TabsContent>
 
       <TabsContent value="messages" className="mt-6">
