@@ -23,10 +23,9 @@ type StatusKey   = "all" | "confirmée" | "logé" | "annulée";
 type MetricKey   = "revenue" | "count" | "encaisse" | "solde";
 
 const STATUS_OPTIONS: { value: StatusKey; label: string }[] = [
-  { value: "all",       label: "Tous (hors annulés)" },
+  { value: "all",       label: "Tous" },
   { value: "confirmée", label: "Confirmées" },
   { value: "logé",      label: "Logé ✓" },
-  { value: "annulée",   label: "Annulées" },
 ];
 
 const TYPE_LABELS: Record<string, string> = {
@@ -288,7 +287,17 @@ export function DashboardOverview() {
               <Button size="sm"
                 variant={metric === "count" ? "gold" : "outline"}
                 onClick={() => setMetric("count")}>
-                Nombre de réservations
+                Nb réservations
+              </Button>
+              <Button size="sm"
+                variant={metric === "encaisse" ? "gold" : "outline"}
+                onClick={() => setMetric("encaisse")}>
+                Encaissé
+              </Button>
+              <Button size="sm"
+                variant={metric === "solde" ? "gold" : "outline"}
+                onClick={() => setMetric("solde")}>
+                Solde restant
               </Button>
             </div>
           </div>
