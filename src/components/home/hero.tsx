@@ -35,7 +35,7 @@ export function Hero() {
             />
           </div>
         </div>
-        <div className="max-w-3xl animate-fade-up">
+        <div className="mx-auto max-w-3xl animate-fade-up">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-4 py-1.5 text-xs font-medium uppercase tracking-[0.18em] text-primary-foreground backdrop-blur">
             <MapPin className="h-3.5 w-3.5 text-gold" />
             {t.hero.badge}
