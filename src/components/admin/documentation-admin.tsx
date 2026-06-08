@@ -64,6 +64,9 @@ export function DocumentationAdmin() {
                 Studio), ses dates et le nombre de voyageurs.
               </li>
               <li>
+                Il peut aussi décider d'envoyer sa demande par <strong>WhatsApp</strong>. Dans ce cas, c'est vous qui recevez ses informations (dates, type de logement, nombre de voyageurs) et qui créez la réservation à la main.
+              </li>
+              <li>
                 La réservation est créée avec le statut{" "}
                 <Badge variant="outline">en attente de validation</Badge> et <strong>sans
                 unité physique attribuée</strong> (aucun numéro de chambre /
