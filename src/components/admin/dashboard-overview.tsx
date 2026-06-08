@@ -217,12 +217,13 @@ export function DashboardOverview() {
     <div className="space-y-8">
       {/* ── 1. CARTES OCCUPATION EN TEMPS RÉEL ── */}
       <section className="space-y-3">
-        <h2 className="font-display text-lg font-bold">Disponibilité à l'instant présent</h2>
+        <h2 className="font-display text-lg font-bold">
+          Clients logés ou confirmés depuis le début du mois
+        </h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {(["chambre", "studio", "appartement"] as const).map((type) => {
-            const { occupied, total } = occupancyByType[type] ?? { occupied: 0, total: 0 };
-            const free = total - occupied;
-            return <OccupancyCard key={type} label={TYPE_LABELS[type]} occupied={occupied} total={total} free={free} />;
+            const count = clientsByType[type] ?? 0;
+            return <ClientsMonthCard key={type} label={TYPE_LABELS[type]} count={count} />;
           })}
         </div>
       </section>
