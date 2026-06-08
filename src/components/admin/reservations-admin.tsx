@@ -540,7 +540,13 @@ function RowActions({
   if (r.displayStatus === "logé") {
     return (
       <div className="flex items-center justify-end gap-1">
-        <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />
+        {r.balance > 0 ? (
+          <Button size="sm" variant="ghost" onClick={onEdit} title="Ajouter une avance">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />
+        )}
         {!reviewUrl ? (
           <Button
             size="sm"
