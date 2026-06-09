@@ -46,13 +46,7 @@ import {
   PENDING_SORT_ORDER,
   type ReviewMeta,
 } from "@/lib/data";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const COMPLETED_STATUS = "terminée"; // legacy — on vérifie aussi confirmée + départ dépassé
 const isCompleted = (r: { status: string; departure_date: string; departure_time: string }) => {
@@ -64,10 +58,7 @@ const isCompleted = (r: { status: string; departure_date: string; departure_time
 
 export const Route = createFileRoute("/mon-espace")({
   head: () => ({
-    meta: [
-      { title: "Mon espace client – Panorama P" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Mon espace client – Panorama P" }, { name: "robots", content: "noindex" }],
   }),
   component: AccountPage,
 });
@@ -82,12 +73,15 @@ function AccountPage() {
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
-      if (!s) navigate({ to: "/auth" });
+      setChecking(false);
+      if (!s && _e !== "INITIAL_SESSION") navigate({ to: "/auth" });
     });
     supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setChecking(false);
-      if (!data.session) navigate({ to: "/auth" });
+      if (data.session) {
+        setSession(data.session);
+        setChecking(false);
+      }
+      // Ne pas rediriger ici — laisser onAuthStateChange gérer
     });
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
@@ -126,7 +120,6 @@ function AccountPage() {
           <AdminAccessButton />
         </div>
       )}
-
 
       <section className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
         <Tabs defaultValue="profile">
@@ -258,9 +251,7 @@ function ProfileSection({ userId, email }: { userId: string; email: string }) {
           )}
         </div>
         <div className="min-w-0">
-          <p className="truncate font-display text-lg font-semibold">
-            {fullName || email}
-          </p>
+          <p className="truncate font-display text-lg font-semibold">{fullName || email}</p>
           <p className="truncate text-sm text-muted-foreground">{email}</p>
         </div>
       </div>
@@ -282,11 +273,7 @@ function ProfileSection({ userId, email }: { userId: string; email: string }) {
         </div>
         <div className="space-y-1.5">
           <Label>{t.account.profile.avatar}</Label>
-          <Input
-            value={avatar}
-            onChange={(e) => setAvatar(e.target.value)}
-            placeholder="https://…"
-          />
+          <Input value={avatar} onChange={(e) => setAvatar(e.target.value)} placeholder="https://…" />
         </div>
         <div className="space-y-1.5">
           <Label>{t.account.profile.email}</Label>
@@ -302,9 +289,8 @@ function ProfileSection({ userId, email }: { userId: string; email: string }) {
       <div className="mt-8 border-t border-red-200 pt-6">
         <p className="text-sm font-semibold text-destructive">Zone dangereuse</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          La suppression de votre compte est définitive. Toutes vos données personnelles
-          seront effacées. Vos réservations resteront dans nos archives pour des raisons
-          administratives.
+          La suppression de votre compte est définitive. Toutes vos données personnelles seront effacées. Vos
+          réservations resteront dans nos archives pour des raisons administratives.
         </p>
         <DeleteAccountButton email={email} />
       </div>
@@ -362,13 +348,7 @@ function SecuritySection() {
         </div>
         <div className="space-y-1.5">
           <Label>Confirmer le mot de passe</Label>
-          <Input
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            required
-            minLength={6}
-          />
+          <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} />
         </div>
         <Button type="submit" variant="gold" disabled={saving}>
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -378,8 +358,6 @@ function SecuritySection() {
     </div>
   );
 }
-
-
 
 /* ---------------- Shared review data ---------------- */
 
@@ -409,15 +387,7 @@ function useMyReviews(userId: string) {
 
 /* ---------------- Star rating input ---------------- */
 
-function StarInput({
-  value,
-  onChange,
-  label,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  label: string;
-}) {
+function StarInput({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-sm">{label}</span>
@@ -431,9 +401,7 @@ function StarInput({
             className="p-0.5"
           >
             <Star
-              className={`h-5 w-5 transition-colors ${
-                i < value ? "fill-gold text-gold" : "text-muted-foreground/40"
-              }`}
+              className={`h-5 w-5 transition-colors ${i < value ? "fill-gold text-gold" : "text-muted-foreground/40"}`}
             />
           </button>
         ))}
@@ -469,7 +437,9 @@ function ReservationsSection({ userId }: { userId: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("id, name, arrival_date, departure_date, arrival_time, departure_time, guests, logement_type, message, status, total_amount, advance_amount, created_at")
+        .select(
+          "id, name, arrival_date, departure_date, arrival_time, departure_time, guests, logement_type, message, status, total_amount, advance_amount, created_at",
+        )
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -507,10 +477,17 @@ function ReservationsSection({ userId }: { userId: string }) {
                   const depMs = dateTimeMsCam(r.departure_date, r.departure_time, "11:00");
                   const nowMs = nowCam();
                   let label = "En attente";
-                  let cls   = "bg-amber-100 text-amber-700";
-                  if (r.status === "annulée") { label = "Annulée"; cls = "bg-red-100 text-red-700"; }
-                  else if (r.status === "confirmée" && depMs <= nowMs) { label = "Logé ✓"; cls = "bg-blue-100 text-blue-700"; }
-                  else if (r.status === "confirmée") { label = "Confirmée"; cls = "bg-emerald-100 text-emerald-700"; }
+                  let cls = "bg-amber-100 text-amber-700";
+                  if (r.status === "annulée") {
+                    label = "Annulée";
+                    cls = "bg-red-100 text-red-700";
+                  } else if (r.status === "confirmée" && depMs <= nowMs) {
+                    label = "Logé ✓";
+                    cls = "bg-blue-100 text-blue-700";
+                  } else if (r.status === "confirmée") {
+                    label = "Confirmée";
+                    cls = "bg-emerald-100 text-emerald-700";
+                  }
                   return <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cls}`}>{label}</span>;
                 })()}
               </div>
@@ -524,11 +501,13 @@ function ReservationsSection({ userId }: { userId: string }) {
               {r.total_amount > 0 && (
                 <div className="mt-2 flex gap-4 text-sm">
                   <span className="text-muted-foreground">
-                    Total : <span className="font-semibold text-foreground">{r.total_amount.toLocaleString("fr-FR")} FCFA</span>
+                    Total :{" "}
+                    <span className="font-semibold text-foreground">{r.total_amount.toLocaleString("fr-FR")} FCFA</span>
                   </span>
                   {r.advance_amount > 0 && (
                     <span className="text-muted-foreground">
-                      Solde : <span className="font-semibold text-gold">
+                      Solde :{" "}
+                      <span className="font-semibold text-gold">
                         {Math.max(0, r.total_amount - r.advance_amount).toLocaleString("fr-FR")} FCFA
                       </span>
                     </span>
@@ -544,11 +523,7 @@ function ReservationsSection({ userId }: { userId: string }) {
                       {t.account.review.already}
                     </span>
                   ) : (
-                    <Button
-                      variant="gold"
-                      size="sm"
-                      onClick={() => setReviewTarget(r)}
-                    >
+                    <Button variant="gold" size="sm" onClick={() => setReviewTarget(r)}>
                       <PenLine className="h-4 w-4" /> {t.account.review.cta}
                     </Button>
                   )}
@@ -559,11 +534,7 @@ function ReservationsSection({ userId }: { userId: string }) {
         })}
       </div>
 
-      <ReviewDialog
-        userId={userId}
-        reservation={reviewTarget}
-        onClose={() => setReviewTarget(null)}
-      />
+      <ReviewDialog userId={userId} reservation={reviewTarget} onClose={() => setReviewTarget(null)} />
     </>
   );
 }
@@ -687,10 +658,7 @@ interface MessageRow {
   created_at: string;
 }
 
-const STATUS_LABEL = (
-  status: string,
-  t: ReturnType<typeof useLanguage>["t"],
-): string => {
+const STATUS_LABEL = (status: string, t: ReturnType<typeof useLanguage>["t"]): string => {
   if (status === "lu") return t.account.support.statusRead;
   if (status === "répondu") return t.account.support.statusReplied;
   return t.account.support.statusNew;
@@ -721,7 +689,9 @@ function MessagesSection({ userId, email }: { userId: string; email: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
-        .select("id, name, arrival_date, departure_date, arrival_time, departure_time, guests, logement_type, message, status, total_amount, advance_amount, created_at")
+        .select(
+          "id, name, arrival_date, departure_date, arrival_time, departure_time, guests, logement_type, message, status, total_amount, advance_amount, created_at",
+        )
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -777,9 +747,7 @@ function MessagesSection({ userId, email }: { userId: string; email: string }) {
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
             <MessageSquare className="h-5 w-5 text-muted-foreground" />
           </div>
-          <p className="font-display text-lg font-semibold">
-            {t.account.support.compose}
-          </p>
+          <p className="font-display text-lg font-semibold">{t.account.support.compose}</p>
         </div>
 
         <form
@@ -807,9 +775,7 @@ function MessagesSection({ userId, email }: { userId: string; email: string }) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">
-                    {t.account.support.noReservation}
-                  </SelectItem>
+                  <SelectItem value="none">{t.account.support.noReservation}</SelectItem>
                   {reservations.map((r) => (
                     <SelectItem key={r.id} value={r.id}>
                       {fmtDate(r.arrival_date)} → {fmtDate(r.departure_date)}
@@ -833,16 +799,8 @@ function MessagesSection({ userId, email }: { userId: string; email: string }) {
             />
           </div>
 
-          <Button
-            type="submit"
-            variant="gold"
-            disabled={mutation.isPending || !content.trim()}
-          >
-            {mutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
+          <Button type="submit" variant="gold" disabled={mutation.isPending || !content.trim()}>
+            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {mutation.isPending ? t.account.support.sending : t.account.support.send}
           </Button>
         </form>
@@ -850,9 +808,7 @@ function MessagesSection({ userId, email }: { userId: string; email: string }) {
 
       {/* History */}
       <div className="space-y-3">
-        <h3 className="font-display text-base font-semibold">
-          {t.account.support.historyTitle}
-        </h3>
+        <h3 className="font-display text-base font-semibold">{t.account.support.historyTitle}</h3>
         {isLoading ? (
           <SectionLoader />
         ) : data.length === 0 ? (
@@ -861,43 +817,25 @@ function MessagesSection({ userId, email }: { userId: string; email: string }) {
           data.map((m) => {
             const meta = parseMessageMeta(m.message);
             const body = stripMessageMeta(m.message);
-            const reservation = reservations.find(
-              (r) => r.id === meta?.reservationId,
-            );
+            const reservation = reservations.find((r) => r.id === meta?.reservationId);
             return (
-              <div
-                key={m.id}
-                className="rounded-2xl border border-border/60 bg-card p-5 shadow-soft"
-              >
+              <div key={m.id} className="rounded-2xl border border-border/60 bg-card p-5 shadow-soft">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    {fmtDate(m.created_at)}
-                  </p>
-                  <Badge
-                    variant={m.status === "répondu" ? "default" : "secondary"}
-                  >
-                    {STATUS_LABEL(m.status, t)}
-                  </Badge>
+                  <p className="text-sm text-muted-foreground">{fmtDate(m.created_at)}</p>
+                  <Badge variant={m.status === "répondu" ? "default" : "secondary"}>{STATUS_LABEL(m.status, t)}</Badge>
                 </div>
-                {meta?.subject && (
-                  <p className="mt-2 font-medium">{meta.subject}</p>
-                )}
+                {meta?.subject && <p className="mt-2 font-medium">{meta.subject}</p>}
                 <p className="mt-1 whitespace-pre-line text-sm">{body}</p>
                 {reservation && (
                   <p className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
                     <CalendarDays className="h-3.5 w-3.5" />
-                    {fmtDate(reservation.arrival_date)} →{" "}
-                    {fmtDate(reservation.departure_date)}
+                    {fmtDate(reservation.arrival_date)} → {fmtDate(reservation.departure_date)}
                   </p>
                 )}
                 {meta?.reply && (
                   <div className="mt-3 rounded-xl border border-gold/30 bg-gold/5 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gold">
-                      {t.account.support.reply}
-                    </p>
-                    <p className="mt-1 whitespace-pre-line text-sm">
-                      {meta.reply}
-                    </p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gold">{t.account.support.reply}</p>
+                    <p className="mt-1 whitespace-pre-line text-sm">{meta.reply}</p>
                   </div>
                 )}
               </div>
@@ -949,18 +887,12 @@ function ReviewsSection({ userId }: { userId: string }) {
   );
 }
 
-
-
 /* ── Client Name Badge (nom visible en permanence) ── */
 function ClientNameBadge({ userId, email }: { userId: string; email: string }) {
   const { data: profile } = useQuery({
     queryKey: ["profile-name", userId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url")
-        .eq("id", userId)
-        .single();
+      const { data } = await supabase.from("profiles").select("full_name, avatar_url").eq("id", userId).single();
       return data;
     },
     staleTime: 60_000,
@@ -983,11 +915,12 @@ function ClientNameBadge({ userId, email }: { userId: string; email: string }) {
 /* ── Admin Access Button 3D ── */
 function AdminAccessButton() {
   const { isAdmin, roles } = useAdminStatus();
-  const tier = roles?.includes("proprietaire") || roles?.includes("admin")
-    ? "Propriétaire"
-    : roles?.includes("gestionnaire")
-    ? "Gestionnaire"
-    : "Administrateur";
+  const tier =
+    roles?.includes("proprietaire") || roles?.includes("admin")
+      ? "Propriétaire"
+      : roles?.includes("gestionnaire")
+        ? "Gestionnaire"
+        : "Administrateur";
 
   return (
     <Link to="/admin" className="block w-full">
@@ -1002,9 +935,7 @@ function AdminAccessButton() {
         <div className="flex items-center justify-center gap-3">
           <ShieldCheck className="h-7 w-7" />
           <div className="text-left">
-            <p className="font-display text-lg font-bold leading-tight">
-              Tableau de bord
-            </p>
+            <p className="font-display text-lg font-bold leading-tight">Tableau de bord</p>
             <p className="text-sm opacity-80">
               Vous êtes connecté en tant que <strong>{tier}</strong>
             </p>
@@ -1018,10 +949,10 @@ function AdminAccessButton() {
 /* ---------------- Delete Account ---------------- */
 
 function DeleteAccountButton({ email }: { email: string }) {
-  const navigate  = useNavigate();
-  const [open,    setOpen]    = useState(false);
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
-  const [busy,    setBusy]    = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const handleDelete = async () => {
     if (confirm.trim().toUpperCase() !== "SUPPRIMER") {
@@ -1059,7 +990,10 @@ function DeleteAccountButton({ email }: { email: string }) {
         variant="outline"
         size="sm"
         className="mt-3 border-red-300 text-destructive hover:bg-red-50"
-        onClick={() => { setOpen(true); setConfirm(""); }}
+        onClick={() => {
+          setOpen(true);
+          setConfirm("");
+        }}
       >
         Supprimer mon compte
       </Button>
@@ -1067,20 +1001,15 @@ function DeleteAccountButton({ email }: { email: string }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-destructive">
-              Supprimer votre compte
-            </DialogTitle>
+            <DialogTitle className="text-destructive">Supprimer votre compte</DialogTitle>
             <DialogDescription className="space-y-2 pt-2">
               <span className="block">
-                Vous êtes sur le point de supprimer définitivement le compte associé à{" "}
-                <strong>{email}</strong>.
+                Vous êtes sur le point de supprimer définitivement le compte associé à <strong>{email}</strong>.
               </span>
-              <span className="block text-destructive font-medium">
-                ⚠️ Cette action est irréversible.
-              </span>
+              <span className="block text-destructive font-medium">⚠️ Cette action est irréversible.</span>
               <span className="block">
-                Vos données personnelles seront supprimées. Vos réservations resteront
-                dans les archives de la résidence pour des raisons administratives.
+                Vos données personnelles seront supprimées. Vos réservations resteront dans les archives de la résidence
+                pour des raisons administratives.
               </span>
             </DialogDescription>
           </DialogHeader>
@@ -1100,11 +1029,7 @@ function DeleteAccountButton({ email }: { email: string }) {
           </div>
 
           <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={busy}
-            >
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>
               Annuler
             </Button>
             <Button
@@ -1112,9 +1037,7 @@ function DeleteAccountButton({ email }: { email: string }) {
               disabled={busy || confirm.trim().toUpperCase() !== "SUPPRIMER"}
               onClick={handleDelete}
             >
-              {busy
-                ? <Loader2 className="h-4 w-4 animate-spin" />
-                : "Supprimer définitivement"}
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Supprimer définitivement"}
             </Button>
           </DialogFooter>
         </DialogContent>
