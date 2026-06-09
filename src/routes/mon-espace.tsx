@@ -71,19 +71,19 @@ function AccountPage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    // Traiter d'abord le token OAuth dans l'URL (cas Google redirect)
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setChecking(false);
+      if (!data.session) navigate({ to: "/auth" });
+    });
+
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
-      setChecking(false);
       if (!s) navigate({ to: "/auth" });
     });
-    // Timeout de sécurité — si onAuthStateChange ne répond pas en 3s
-    const timeout = setTimeout(() => {
-      setChecking(false);
-    }, 3000);
-    return () => {
-      sub.subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
+
+    return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
   const signOut = async () => {
