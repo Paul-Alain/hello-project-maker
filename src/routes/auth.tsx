@@ -314,9 +314,13 @@ function AuthPage() {
           </Button>
         </div>
 
-        <div className="mt-6 text-center">
-          <Link to="/" className="text-sm text-muted-foreground hover:text-gold">
-            ← {t.nav.home}
+        <div className="mt-8 flex justify-center">
+          <Link
+            to="/"
+            className="group inline-flex items-center gap-3 rounded-2xl bg-gradient-to-b from-gold/90 via-gold to-amber-700 px-8 py-4 text-lg font-extrabold uppercase tracking-wide text-gold-foreground shadow-[0_10px_0_-2px_rgba(120,53,15,0.55),0_18px_30px_-10px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.45),inset_0_-3px_8px_rgba(0,0,0,0.25)] ring-1 ring-amber-900/40 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[0_12px_0_-2px_rgba(120,53,15,0.55),0_22px_38px_-12px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-3px_8px_rgba(0,0,0,0.25)] active:translate-y-1 active:shadow-[0_4px_0_-2px_rgba(120,53,15,0.55),0_8px_18px_-8px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-2px_6px_rgba(0,0,0,0.3)]"
+          >
+            <span className="text-2xl leading-none drop-shadow-[0_2px_0_rgba(0,0,0,0.35)] transition-transform group-hover:-translate-x-1">←</span>
+            <span className="drop-shadow-[0_1px_0_rgba(0,0,0,0.35)]">{t.nav.home}</span>
           </Link>
         </div>
       </div>
