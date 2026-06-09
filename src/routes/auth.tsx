@@ -12,11 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { PhoneInput } from "@/components/forms/phone-input";
-import {
-  LAST_EMAIL_KEY,
-  REMEMBER_KEY,
-  SESSION_MARKER_KEY,
-} from "@/lib/auth-prefs";
+import { LAST_EMAIL_KEY, REMEMBER_KEY, SESSION_MARKER_KEY } from "@/lib/auth-prefs";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Connexion – Panorama P" }, { name: "robots", content: "noindex" }] }),
@@ -64,9 +60,7 @@ function AuthPage() {
     setLoading(false);
     if (error) {
       if (error.message.toLowerCase().includes("email not confirmed")) {
-        toast.error(
-          "Votre adresse email n'est pas encore confirmée. Veuillez vérifier votre boîte mail.",
-        );
+        toast.error("Votre adresse email n'est pas encore confirmée. Veuillez vérifier votre boîte mail.");
         return;
       }
       toast.error(error.message);
@@ -76,11 +70,11 @@ function AuthPage() {
   };
 
   const validatePassword = (pwd: string): string | null => {
-    if (pwd.length < 6)                        return "Le mot de passe doit contenir au moins 6 caractères.";
-    if (!/[0-9]/.test(pwd))                    return "Le mot de passe doit contenir au moins un chiffre.";
-    if (!/[#@!$%^&*\-_+=?]/.test(pwd))        return "Le mot de passe doit contenir au moins un symbole (#, @, !, $…).";
-    if (!/[A-Z]/.test(pwd))                    return "Le mot de passe doit contenir au moins une lettre majuscule.";
-    if (!/[a-z]/.test(pwd))                    return "Le mot de passe doit contenir au moins une lettre minuscule.";
+    if (pwd.length < 6) return "Le mot de passe doit contenir au moins 6 caractères.";
+    if (!/[0-9]/.test(pwd)) return "Le mot de passe doit contenir au moins un chiffre.";
+    if (!/[#@!$%^&*\-_+=?]/.test(pwd)) return "Le mot de passe doit contenir au moins un symbole (#, @, !, $…).";
+    if (!/[A-Z]/.test(pwd)) return "Le mot de passe doit contenir au moins une lettre majuscule.";
+    if (!/[a-z]/.test(pwd)) return "Le mot de passe doit contenir au moins une lettre minuscule.";
     return null;
   };
 
@@ -120,9 +114,7 @@ function AuthPage() {
     // When email confirmation is required, Supabase returns a user with no active session.
     if (data.user && !data.session) {
       setSignupSent(true);
-      toast.success(
-        "Un email de validation a été envoyé à votre adresse. Veuillez vérifier votre boîte mail.",
-      );
+      toast.success("Un email de validation a été envoyé à votre adresse. Veuillez vérifier votre boîte mail.");
       return;
     }
     navigate({ to: "/mon-espace" });
@@ -132,7 +124,7 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset`,
+      redirectTo: `https://panorama-p-residence.com/reset-password`,
     });
     setLoading(false);
     if (error) {
@@ -140,9 +132,7 @@ function AuthPage() {
       return;
     }
     setResetSent(true);
-    toast.success(
-      "Un email de réinitialisation a été envoyé. Veuillez vérifier votre boîte mail.",
-    );
+    toast.success("Un email de réinitialisation a été envoyé. Veuillez vérifier votre boîte mail.");
   };
 
   const signInWithGoogle = async () => {
@@ -159,8 +149,6 @@ function AuthPage() {
     setLoading(false);
     navigate({ to: "/mon-espace" });
   };
-
-
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-secondary/40 px-4">
@@ -221,12 +209,15 @@ function AuthPage() {
               ) : (
                 <form onSubmit={signIn} className="mt-5 space-y-4">
                   <Field label={t.admin.email} type="email" value={email} onChange={setEmail} autoComplete="username" />
-                  <Field label={t.admin.password} type="password" value={password} onChange={setPassword} autoComplete="current-password" />
+                  <Field
+                    label={t.admin.password}
+                    type="password"
+                    value={password}
+                    onChange={setPassword}
+                    autoComplete="current-password"
+                  />
                   <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Checkbox
-                      checked={remember}
-                      onCheckedChange={(v) => setRemember(v === true)}
-                    />
+                    <Checkbox checked={remember} onCheckedChange={(v) => setRemember(v === true)} />
                     Se souvenir de moi
                   </label>
                   <Button type="submit" variant="gold" className="w-full" disabled={loading}>
@@ -244,7 +235,6 @@ function AuthPage() {
               )}
             </TabsContent>
 
-
             <TabsContent value="signup">
               {signupSent ? (
                 <div className="mt-5 space-y-4 text-center">
@@ -254,12 +244,7 @@ function AuthPage() {
                   <p className="text-sm text-muted-foreground">
                     Un email de validation a été envoyé à votre adresse. Veuillez vérifier votre boîte mail.
                   </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setSignupSent(false)}
-                  >
+                  <Button type="button" variant="outline" className="w-full" onClick={() => setSignupSent(false)}>
                     Retour
                   </Button>
                 </div>
@@ -286,14 +271,19 @@ function AuthPage() {
                       <p className="text-xs font-medium text-muted-foreground">Le mot de passe doit contenir :</p>
                       <div className="flex flex-col gap-1 text-xs">
                         {[
-                          { ok: password.length >= 6,                                    label: "Au moins 6 caractères" },
-                          { ok: /[0-9]/.test(password),                                  label: "Au moins 1 chiffre (0-9)" },
-                          { ok: /[#@!$%^&*\-_+=?]/.test(password),                      label: "Au moins 1 symbole (#, @, !, $…)" },
-                          { ok: /[A-Z]/.test(password),                                  label: "Au moins 1 lettre majuscule (A-Z)" },
-                          { ok: /[a-z]/.test(password),                                  label: "Au moins 1 lettre minuscule (a-z)" },
+                          { ok: password.length >= 6, label: "Au moins 6 caractères" },
+                          { ok: /[0-9]/.test(password), label: "Au moins 1 chiffre (0-9)" },
+                          { ok: /[#@!$%^&*\-_+=?]/.test(password), label: "Au moins 1 symbole (#, @, !, $…)" },
+                          { ok: /[A-Z]/.test(password), label: "Au moins 1 lettre majuscule (A-Z)" },
+                          { ok: /[a-z]/.test(password), label: "Au moins 1 lettre minuscule (a-z)" },
                         ].map(({ ok, label }) => (
-                          <span key={label} className={`flex items-center gap-1.5 ${ok && password.length > 0 ? "text-emerald-600" : "text-muted-foreground"}`}>
-                            <span className={`inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[10px] font-bold ${ok && password.length > 0 ? "bg-emerald-100 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
+                          <span
+                            key={label}
+                            className={`flex items-center gap-1.5 ${ok && password.length > 0 ? "text-emerald-600" : "text-muted-foreground"}`}
+                          >
+                            <span
+                              className={`inline-flex h-3.5 w-3.5 items-center justify-center rounded-full text-[10px] font-bold ${ok && password.length > 0 ? "bg-emerald-100 text-emerald-600" : "bg-muted text-muted-foreground"}`}
+                            >
                               {ok && password.length > 0 ? "✓" : "○"}
                             </span>
                             {label}
@@ -310,29 +300,19 @@ function AuthPage() {
                 </form>
               )}
             </TabsContent>
-
           </Tabs>
 
           <div className="my-5 flex items-center gap-3">
             <span className="h-px flex-1 bg-border" />
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t.auth.or}
-            </span>
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">{t.auth.or}</span>
             <span className="h-px flex-1 bg-border" />
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled={loading}
-            onClick={signInWithGoogle}
-          >
+          <Button type="button" variant="outline" className="w-full" disabled={loading} onClick={signInWithGoogle}>
             <GoogleIcon className="h-4 w-4" />
             {t.auth.continueWithGoogle}
           </Button>
         </div>
-
 
         <div className="mt-6 text-center">
           <Link to="/" className="text-sm text-muted-foreground hover:text-gold">
@@ -366,8 +346,6 @@ function GoogleIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
-
 
 function Field({
   label,
