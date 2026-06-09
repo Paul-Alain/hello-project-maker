@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -11,7 +12,6 @@ import {
   CalendarDays,
   MessageSquare,
   Star,
-  UsersRound,
   Building2,
   Eye,
   Wrench,
@@ -34,13 +34,12 @@ import { ReservationsAdmin } from "@/components/admin/reservations-admin";
 import { MessagesAdmin } from "@/components/admin/messages-admin";
 import { ReviewsAdmin } from "@/components/admin/reviews-admin";
 
-import { TeamAdmin } from "@/components/admin/team-admin";
 import { OccupancyCalendar } from "@/components/admin/occupancy-calendar";
 import { LogementsAdmin } from "@/components/admin/logements-admin";
 import { DocumentationAdmin } from "@/components/admin/documentation-admin";
 
 import { claimAdmin } from "@/lib/admin.functions";
-import { staffGetStatus } from "@/lib/operations.functions";
+import { staffGetStatus, adminListMessages } from "@/lib/operations.functions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
