@@ -2,15 +2,16 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Star, Eye, EyeOff, MessageSquare } from "lucide-react";
+import { Loader2, Star, Eye, EyeOff, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { opListReviews, opModerateReview } from "@/lib/review.functions";
+import { opListReviews, opModerateReview, opDeleteReview } from "@/lib/review.functions";
 
 export function ReviewsAdmin() {
   const qc          = useQueryClient();
   const runList     = useServerFn(opListReviews);
   const runModerate = useServerFn(opModerateReview);
+  const runDelete   = useServerFn(opDeleteReview);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const { data = [], isLoading } = useQuery({
@@ -31,6 +32,18 @@ export function ReviewsAdmin() {
       toast.success(action === "publish" ? "Avis publié." : "Avis masqué.");
     } catch {
       toast.error("Erreur.");
+    }
+    setBusyId(null);
+  };
+
+  const remove = async (id: string) => {
+    setBusyId(id);
+    try {
+      await runDelete({ data: { id } });
+      await qc.invalidateQueries({ queryKey: ["admin-reviews"] });
+      toast.success("Avis supprimé.");
+    } catch {
+      toast.error("Erreur lors de la suppression.");
     }
     setBusyId(null);
   };
@@ -57,7 +70,7 @@ export function ReviewsAdmin() {
           <div className="space-y-3">
             {pending.map((r) => (
               <ReviewCard key={r.id} r={r} busyId={busyId}
-                action="publish" onModerate={moderate} fmtDate={fmtDate} />
+                action="publish" onModerate={moderate} onDelete={remove} fmtDate={fmtDate} />
             ))}
           </div>
         )}
@@ -75,7 +88,7 @@ export function ReviewsAdmin() {
           <div className="space-y-3">
             {published.map((r) => (
               <ReviewCard key={r.id} r={r} busyId={busyId}
-                action="unpublish" onModerate={moderate} fmtDate={fmtDate} />
+                action="unpublish" onModerate={moderate} onDelete={remove} fmtDate={fmtDate} />
             ))}
           </div>
         )}
@@ -91,7 +104,7 @@ export function ReviewsAdmin() {
           <div className="space-y-3">
             {rejected.map((r) => (
               <ReviewCard key={r.id} r={r} busyId={busyId}
-                action="publish" onModerate={moderate} fmtDate={fmtDate} />
+                action="publish" onModerate={moderate} onDelete={remove} fmtDate={fmtDate} />
             ))}
           </div>
         </section>
@@ -102,12 +115,13 @@ export function ReviewsAdmin() {
 }
 
 function ReviewCard({
-  r, busyId, action, onModerate, fmtDate,
+  r, busyId, action, onModerate, onDelete, fmtDate,
 }: {
   r: any;
   busyId: string | null;
   action: "publish" | "unpublish";
   onModerate: (id: string, action: "publish" | "unpublish") => void;
+  onDelete: (id: string) => void;
   fmtDate: (s: string) => string;
 }) {
   return (
@@ -125,18 +139,28 @@ function ReviewCard({
             {(r as any).guest_name} · {fmtDate((r as any).created_at)}
           </p>
         </div>
-        <Button
-          size="sm"
-          variant={action === "publish" ? "gold" : "outline"}
-          disabled={busyId === r.id}
-          onClick={() => onModerate(r.id, action)}
-        >
-          {busyId === r.id
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : action === "publish"
-              ? <><Eye className="h-4 w-4" /> Publier</>
-              : <><EyeOff className="h-4 w-4" /> Masquer</>}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant={action === "publish" ? "gold" : "outline"}
+            disabled={busyId === r.id}
+            onClick={() => onModerate(r.id, action)}
+          >
+            {busyId === r.id
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : action === "publish"
+                ? <><Eye className="h-4 w-4" /> Publier</>
+                : <><EyeOff className="h-4 w-4" /> Masquer</>}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={busyId === r.id}
+            onClick={() => onDelete(r.id)}
+          >
+            {busyId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="h-4 w-4" /> Supprimer</>}
+          </Button>
+        </div>
       </div>
       <p className="mt-3 text-sm leading-relaxed">{(r as any).comment || "—"}</p>
     </div>
