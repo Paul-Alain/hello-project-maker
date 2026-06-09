@@ -8,21 +8,21 @@ import { Badge } from "@/components/ui/badge";
 import { opListReviews, opModerateReview, opDeleteReview } from "@/lib/review.functions";
 
 export function ReviewsAdmin() {
-  const qc          = useQueryClient();
-  const runList     = useServerFn(opListReviews);
+  const qc = useQueryClient();
+  const runList = useServerFn(opListReviews);
   const runModerate = useServerFn(opModerateReview);
-  const runDelete   = useServerFn(opDeleteReview);
+  const runDelete = useServerFn(opDeleteReview);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const { data = [], isLoading } = useQuery({
     queryKey: ["admin-reviews"],
-    queryFn:  () => runList(),
-    staleTime: 30_000,
+    queryFn: () => runList(),
+    staleTime: 0,
   });
 
-  const pending   = data.filter((r) => !r.published && !r.rejected);
+  const pending = data.filter((r) => !r.published && !r.rejected);
   const published = data.filter((r) => r.published);
-  const rejected  = data.filter((r) => r.rejected && !r.published);
+  const rejected = data.filter((r) => r.rejected && !r.published);
 
   const moderate = async (id: string, action: "publish" | "unpublish") => {
     setBusyId(id);
@@ -50,14 +50,15 @@ export function ReviewsAdmin() {
 
   const fmtDate = (s: string) =>
     new Date(s).toLocaleDateString("fr-FR", {
-      day: "2-digit", month: "long", year: "numeric",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
     });
 
   if (isLoading) return <Loader2 className="h-5 w-5 animate-spin text-gold" />;
 
   return (
     <div className="space-y-8">
-
       {/* En attente */}
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
@@ -69,8 +70,15 @@ export function ReviewsAdmin() {
         ) : (
           <div className="space-y-3">
             {pending.map((r) => (
-              <ReviewCard key={r.id} r={r} busyId={busyId}
-                action="publish" onModerate={moderate} onDelete={remove} fmtDate={fmtDate} />
+              <ReviewCard
+                key={r.id}
+                r={r}
+                busyId={busyId}
+                action="publish"
+                onModerate={moderate}
+                onDelete={remove}
+                fmtDate={fmtDate}
+              />
             ))}
           </div>
         )}
@@ -87,8 +95,15 @@ export function ReviewsAdmin() {
         ) : (
           <div className="space-y-3">
             {published.map((r) => (
-              <ReviewCard key={r.id} r={r} busyId={busyId}
-                action="unpublish" onModerate={moderate} onDelete={remove} fmtDate={fmtDate} />
+              <ReviewCard
+                key={r.id}
+                r={r}
+                busyId={busyId}
+                action="unpublish"
+                onModerate={moderate}
+                onDelete={remove}
+                fmtDate={fmtDate}
+              />
             ))}
           </div>
         )}
@@ -103,19 +118,30 @@ export function ReviewsAdmin() {
           </h2>
           <div className="space-y-3">
             {rejected.map((r) => (
-              <ReviewCard key={r.id} r={r} busyId={busyId}
-                action="publish" onModerate={moderate} onDelete={remove} fmtDate={fmtDate} />
+              <ReviewCard
+                key={r.id}
+                r={r}
+                busyId={busyId}
+                action="publish"
+                onModerate={moderate}
+                onDelete={remove}
+                fmtDate={fmtDate}
+              />
             ))}
           </div>
         </section>
       )}
-
     </div>
   );
 }
 
 function ReviewCard({
-  r, busyId, action, onModerate, onDelete, fmtDate,
+  r,
+  busyId,
+  action,
+  onModerate,
+  onDelete,
+  fmtDate,
 }: {
   r: any;
   busyId: string | null;
@@ -130,8 +156,7 @@ function ReviewCard({
         <div className="space-y-1">
           <div className="flex items-center gap-1 text-amber-500">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Star key={i}
-                className={`h-4 w-4 ${i < r.rating ? "fill-current" : "text-muted-foreground/20"}`} />
+              <Star key={i} className={`h-4 w-4 ${i < r.rating ? "fill-current" : "text-muted-foreground/20"}`} />
             ))}
             <span className="ml-1 text-xs font-semibold text-amber-700">{r.rating}/5</span>
           </div>
@@ -146,19 +171,26 @@ function ReviewCard({
             disabled={busyId === r.id}
             onClick={() => onModerate(r.id, action)}
           >
-            {busyId === r.id
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : action === "publish"
-                ? <><Eye className="h-4 w-4" /> Publier</>
-                : <><EyeOff className="h-4 w-4" /> Masquer</>}
+            {busyId === r.id ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : action === "publish" ? (
+              <>
+                <Eye className="h-4 w-4" /> Publier
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-4 w-4" /> Masquer
+              </>
+            )}
           </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            disabled={busyId === r.id}
-            onClick={() => onDelete(r.id)}
-          >
-            {busyId === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="h-4 w-4" /> Supprimer</>}
+          <Button size="sm" variant="destructive" disabled={busyId === r.id} onClick={() => onDelete(r.id)}>
+            {busyId === r.id ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4" /> Supprimer
+              </>
+            )}
           </Button>
         </div>
       </div>
