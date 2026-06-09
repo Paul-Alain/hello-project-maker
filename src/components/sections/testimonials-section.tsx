@@ -35,6 +35,11 @@ export function TestimonialsSection() {
                   {review.location && (
                     <p className="text-xs text-muted-foreground">{review.location}</p>
                   )}
+                  {review.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(review.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                    </p>
+                  )}
                 </figcaption>
               </figure>
             </Reveal>

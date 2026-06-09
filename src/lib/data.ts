@@ -40,6 +40,7 @@ export interface Testimonial {
   message_de: string | null;
   message_en: string | null;
   sort_order: number;
+  created_at?: string;
 }
 
 export function localized(row: object, base: string, lang: Lang): string {
