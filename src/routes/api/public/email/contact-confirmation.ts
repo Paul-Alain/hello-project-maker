@@ -25,7 +25,7 @@ export const Route = createFileRoute('/api/public/email/contact-confirmation')({
         const since = new Date(Date.now() - 15 * 60 * 1000).toISOString()
         const { data: match } = await supabaseAdmin
           .from('messages')
-          .select('id, message')
+          .select('id, name, message, phone')
           .eq('email', parsed.email)
           .gte('created_at', since)
           .order('created_at', { ascending: false })
@@ -47,7 +47,24 @@ export const Route = createFileRoute('/api/public/email/contact-confirmation')({
           },
         })
 
-        return Response.json({ success: true, sent: result.success })
+        // Always notify the residence team of the new contact message.
+        const teamResult = await enqueueAppEmail({
+          templateName: 'contact-team-alert',
+          recipientEmail: 'residencespanoramap@gmail.com',
+          idempotencyKey: `contact-team-${match.id}`,
+          templateData: {
+            name: match.name ?? parsed.name,
+            email: parsed.email,
+            phone: match.phone ?? '',
+            message: match.message ?? '',
+          },
+        })
+
+        return Response.json({
+          success: true,
+          sent: result.success,
+          teamNotified: teamResult.success,
+        })
       },
     },
   },
