@@ -50,23 +50,29 @@ interface CalRes {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-// Convertit une Date JS en "YYYY-MM-DD" selon le fuseau Cameroun (UTC+1, pas de DST)
-const toISO = (d: Date) => {
-  const cam = new Date(d.getTime() + 60 * 60 * 1000); // décalage +1h
-  const y = cam.getUTCFullYear();
-  const m = String(cam.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(cam.getUTCDate()).padStart(2, "0");
+// Arithmétique de dates 100% en string (YYYY-MM-DD), indépendante du fuseau
+// horaire du navigateur. Indispensable : passer par `new Date(iso)` décale d'un
+// jour quand le navigateur n'est pas exactement à UTC+1 (ex : CEST = UTC+2 en
+// été), ce qui plaçait les barres sur la mauvaise colonne du calendrier.
+const isoToUTCms = (iso: string) => Date.UTC(
+  Number(iso.slice(0, 4)),
+  Number(iso.slice(5, 7)) - 1,
+  Number(iso.slice(8, 10)),
+);
+
+const msToISO = (ms: number) => {
+  const d = new Date(ms);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 };
 
-const addDays = (iso: string, n: number) => {
-  const d = new Date(iso + "T00:00:00");
-  d.setDate(d.getDate() + n);
-  return toISO(d);
-};
+const addDays = (iso: string, n: number) =>
+  msToISO(isoToUTCms(iso) + n * 86_400_000);
 
 const dayDiff = (a: string, b: string) =>
-  Math.round((Date.parse(b + "T00:00:00") - Date.parse(a + "T00:00:00")) / 86_400_000);
+  Math.round((isoToUTCms(b) - isoToUTCms(a)) / 86_400_000);
 
 function calToEditable(r: CalRes): EditableReservation {
   return {
