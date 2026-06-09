@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -11,7 +12,6 @@ import {
   CalendarDays,
   MessageSquare,
   Star,
-  UsersRound,
   Building2,
   Eye,
   Wrench,
@@ -34,13 +34,13 @@ import { ReservationsAdmin } from "@/components/admin/reservations-admin";
 import { MessagesAdmin } from "@/components/admin/messages-admin";
 import { ReviewsAdmin } from "@/components/admin/reviews-admin";
 
-import { TeamAdmin } from "@/components/admin/team-admin";
 import { OccupancyCalendar } from "@/components/admin/occupancy-calendar";
 import { LogementsAdmin } from "@/components/admin/logements-admin";
 import { DocumentationAdmin } from "@/components/admin/documentation-admin";
 
 import { claimAdmin } from "@/lib/admin.functions";
 import { staffGetStatus } from "@/lib/operations.functions";
+import { adminListMessages } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -58,6 +58,7 @@ function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
   const [claiming, setClaiming] = useState(false);
+  const [ownerMode, setOwnerMode] = useState<"view" | "manager">("view");
 
   const runClaim = useServerFn(claimAdmin);
   const runGetAdminStatus = useServerFn(staffGetStatus);
@@ -130,6 +131,9 @@ function AdminPage() {
     );
   }
 
+  const isOwner = roleTier(roles) === "owner";
+  const ownerViewMode = isOwner && ownerMode === "view";
+
   return (
     <div className="min-h-screen bg-secondary/30">
       <header className="border-b border-border/60 bg-background">
@@ -147,7 +151,7 @@ function AdminPage() {
                 ) : null;
               })()}
 
-            {isAdmin && <AdminNotifications adminId={session.user.id} />}
+            {isAdmin && !ownerViewMode && <AdminNotifications adminId={session.user.id} />}
 
             <Button asChild variant="ghost" size="sm">
               <Link to="/">
@@ -179,21 +183,47 @@ function AdminPage() {
             </Button>
           </div>
         ) : (
-          <AdminDashboard roles={roles} />
+          <AdminDashboard roles={roles} ownerMode={ownerMode} setOwnerMode={setOwnerMode} />
         )}
       </main>
     </div>
   );
 }
 
-function AdminDashboard({ roles }: { roles: string[] }) {
+function AdminDashboard({
+  roles,
+  ownerMode,
+  setOwnerMode,
+}: {
+  roles: string[];
+  ownerMode: "view" | "manager";
+  setOwnerMode: (m: "view" | "manager") => void;
+}) {
   const tier = roleTier(roles);
   const isOwner = tier === "owner";
-
-  // Owner-only toggle: "view" = read-only, "manager" = full edit (like a manager).
-  // Has no effect for non-owner roles.
-  const [ownerMode, setOwnerMode] = useState<"view" | "manager">("view");
   const readOnly = isOwner && ownerMode === "view";
+
+  // Unread messages: live count + dismiss-on-tab-click via localStorage.
+  const runListMessages = useServerFn(adminListMessages);
+  const { data: messages = [] } = useQuery({
+    queryKey: ["admin-messages"],
+    queryFn: async () => (await runListMessages()) as { id: string; status: string; created_at: string }[],
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+  const SEEN_KEY = "admin-messages-seen-at";
+  const [seenAt, setSeenAt] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    return Number(window.localStorage.getItem(SEEN_KEY) ?? 0);
+  });
+  const newUnreadCount = messages.filter(
+    (m) => m.status === "nouveau" && new Date(m.created_at).getTime() > seenAt,
+  ).length;
+  const markMessagesSeen = () => {
+    const now = Date.now();
+    setSeenAt(now);
+    if (typeof window !== "undefined") window.localStorage.setItem(SEEN_KEY, String(now));
+  };
 
   const tabs = [
     { value: "overview", label: "Tableau de bord", icon: LayoutDashboard },
@@ -202,7 +232,6 @@ function AdminDashboard({ roles }: { roles: string[] }) {
     { value: "logements", label: "Logements", icon: Building2 },
     { value: "messages", label: "Messages", icon: MessageSquare },
     { value: "reviews", label: "Avis", icon: Star },
-    ...(isOwner ? [{ value: "team", label: "Administration", icon: UsersRound }] : []),
     { value: "documentation", label: "Documentation", icon: BookOpen },
   ];
 
@@ -244,16 +273,26 @@ function AdminDashboard({ roles }: { roles: string[] }) {
       <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <TabsList className="w-max">
           {tabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5">
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="gap-1.5"
+              onClick={tab.value === "messages" ? markMessagesSeen : undefined}
+            >
               <tab.icon className="h-4 w-4" />
               <span className="hidden sm:inline">{tab.label}</span>
+              {tab.value === "messages" && newUnreadCount > 0 && (
+                <Badge variant="destructive" className="ml-1 h-4 min-w-4 px-1 text-[10px]">
+                  {newUnreadCount}
+                </Badge>
+              )}
             </TabsTrigger>
           ))}
         </TabsList>
       </div>
 
       <TabsContent value="overview" className="mt-6">
-        <DashboardOverview />
+        <DashboardOverview readOnly={readOnly} />
       </TabsContent>
 
       <TabsContent value="reservations" className="mt-6">
@@ -275,12 +314,6 @@ function AdminDashboard({ roles }: { roles: string[] }) {
       <TabsContent value="reviews" className="mt-6">
         <ReviewsAdmin />
       </TabsContent>
-
-      {isOwner && (
-        <TabsContent value="team" className="mt-6">
-          <TeamAdmin />
-        </TabsContent>
-      )}
 
       <TabsContent value="documentation" className="mt-6">
         <DocumentationAdmin />

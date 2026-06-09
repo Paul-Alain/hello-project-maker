@@ -71,7 +71,7 @@ const MONTHS = [
 const YEARS = Array.from({ length: 41 }, (_, i) => 2020 + i);
 
 // ── Main component ───────────────────────────────────────────────────────
-export function DashboardOverview() {
+export function DashboardOverview({ readOnly = false }: { readOnly?: boolean } = {}) {
   const residence = useResidence();
   const qc = useQueryClient();
   const runDash = useServerFn(opGetDashboard);
@@ -407,6 +407,7 @@ export function DashboardOverview() {
       </section>
 
       {/* ── 3. ACTIONS URGENTES ── */}
+      {!readOnly && (
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 font-display text-lg font-bold">
           <AlertTriangle className="h-5 w-5 text-amber-500" />
@@ -456,6 +457,7 @@ export function DashboardOverview() {
           </div>
         )}
       </section>
+      )}
     </div>
   );
 }
