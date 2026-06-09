@@ -40,6 +40,13 @@ export function NotificationCenter({
 
   const allIds = useMemo(() => notifications.map((n) => n.id), [notifications]);
 
+  // N'afficher QUE les nouvelles notifications (non lues).
+  // Les anciennes disparaissent dès qu'elles sont marquées lues.
+  const visibleNotifications = useMemo(
+    () => notifications.filter((n) => !isRead(n.id)),
+    [notifications, isRead],
+  );
+
   // Cloche rouge si des réservations sont en attente de validation
   const hasPendingReservations = notifications.some(
     (n) => n.kind === "reservation" && !isRead(n.id)
@@ -88,14 +95,14 @@ export function NotificationCenter({
           )}
         </div>
 
-        {notifications.length === 0 ? (
+        {visibleNotifications.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
             {tn.empty}
           </p>
         ) : (
           <ScrollArea className="max-h-[60vh]">
             <ul className="divide-y divide-border/50">
-              {notifications.map((n) => {
+              {visibleNotifications.map((n) => {
                 const read = isRead(n.id);
                 const Icon = KIND_ICON[n.kind];
                 return (
