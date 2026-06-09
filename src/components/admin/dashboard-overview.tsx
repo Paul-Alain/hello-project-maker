@@ -71,7 +71,7 @@ const MONTHS = [
 const YEARS = Array.from({ length: 41 }, (_, i) => 2020 + i);
 
 // ── Main component ───────────────────────────────────────────────────────
-export function DashboardOverview() {
+export function DashboardOverview({ readOnly = false }: { readOnly?: boolean } = {}) {
   const residence = useResidence();
   const qc = useQueryClient();
   const runDash = useServerFn(opGetDashboard);
