@@ -13,6 +13,8 @@ import {
   Star,
   UsersRound,
   Building2,
+  Eye,
+  Wrench,
 } from "lucide-react";
 import { BookOpen } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
@@ -188,6 +190,11 @@ function AdminDashboard({ roles }: { roles: string[] }) {
   const tier = roleTier(roles);
   const isOwner = tier === "owner";
 
+  // Owner-only toggle: "view" = read-only, "manager" = full edit (like a manager).
+  // Has no effect for non-owner roles.
+  const [ownerMode, setOwnerMode] = useState<"view" | "manager">("view");
+  const readOnly = isOwner && ownerMode === "view";
+
   const tabs = [
     { value: "overview", label: "Tableau de bord", icon: LayoutDashboard },
     { value: "reservations", label: "Réservations", icon: CalendarDays },
@@ -201,6 +208,39 @@ function AdminDashboard({ roles }: { roles: string[] }) {
 
   return (
     <Tabs defaultValue="overview">
+      {isOwner && (
+        <div className="mb-6 flex justify-center">
+          <div
+            role="group"
+            aria-label="Mode propriétaire"
+            className="relative inline-flex rounded-2xl border border-gold/40 bg-gradient-to-b from-amber-50 to-amber-100 p-1.5 shadow-[0_8px_20px_-6px_rgba(180,140,40,0.45),inset_0_1px_0_rgba(255,255,255,0.6)]"
+          >
+            <button
+              type="button"
+              onClick={() => setOwnerMode("view")}
+              className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-extrabold tracking-wide transition-all active:translate-y-0.5 ${
+                ownerMode === "view"
+                  ? "bg-gradient-to-b from-gold/90 via-gold to-amber-700 text-white shadow-[0_6px_0_-2px_rgba(120,80,0,0.6),0_10px_20px_-6px_rgba(180,140,40,0.6),inset_0_1px_0_rgba(255,255,255,0.4)]"
+                  : "text-amber-900/80 hover:text-amber-900"
+              }`}
+            >
+              <Eye className="h-4 w-4" /> Vue simple
+            </button>
+            <button
+              type="button"
+              onClick={() => setOwnerMode("manager")}
+              className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-extrabold tracking-wide transition-all active:translate-y-0.5 ${
+                ownerMode === "manager"
+                  ? "bg-gradient-to-b from-gold/90 via-gold to-amber-700 text-white shadow-[0_6px_0_-2px_rgba(120,80,0,0.6),0_10px_20px_-6px_rgba(180,140,40,0.6),inset_0_1px_0_rgba(255,255,255,0.4)]"
+                  : "text-amber-900/80 hover:text-amber-900"
+              }`}
+            >
+              <Wrench className="h-4 w-4" /> Mode gestionnaire
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         <TabsList className="w-max">
           {tabs.map((tab) => (
@@ -217,15 +257,15 @@ function AdminDashboard({ roles }: { roles: string[] }) {
       </TabsContent>
 
       <TabsContent value="reservations" className="mt-6">
-        <ReservationsAdmin readOnly={isOwner} />
+        <ReservationsAdmin readOnly={readOnly} />
       </TabsContent>
 
       <TabsContent value="calendar" className="mt-6">
-        <OccupancyCalendar readOnly={isOwner} />
+        <OccupancyCalendar readOnly={readOnly} />
       </TabsContent>
 
       <TabsContent value="logements" className="mt-6">
-        <LogementsAdmin readOnly={isOwner} />
+        <LogementsAdmin readOnly={readOnly} />
       </TabsContent>
 
       <TabsContent value="messages" className="mt-6">
