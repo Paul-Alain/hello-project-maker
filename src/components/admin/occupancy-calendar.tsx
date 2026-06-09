@@ -54,11 +54,8 @@ interface CalRes {
 // horaire du navigateur. Indispensable : passer par `new Date(iso)` décale d'un
 // jour quand le navigateur n'est pas exactement à UTC+1 (ex : CEST = UTC+2 en
 // été), ce qui plaçait les barres sur la mauvaise colonne du calendrier.
-const isoToUTCms = (iso: string) => Date.UTC(
-  Number(iso.slice(0, 4)),
-  Number(iso.slice(5, 7)) - 1,
-  Number(iso.slice(8, 10)),
-);
+const isoToUTCms = (iso: string) =>
+  Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
 
 const msToISO = (ms: number) => {
   const d = new Date(ms);
@@ -68,11 +65,9 @@ const msToISO = (ms: number) => {
   return `${y}-${m}-${day}`;
 };
 
-const addDays = (iso: string, n: number) =>
-  msToISO(isoToUTCms(iso) + n * 86_400_000);
+const addDays = (iso: string, n: number) => msToISO(isoToUTCms(iso) + n * 86_400_000);
 
-const dayDiff = (a: string, b: string) =>
-  Math.round((isoToUTCms(b) - isoToUTCms(a)) / 86_400_000);
+const dayDiff = (a: string, b: string) => Math.round((isoToUTCms(b) - isoToUTCms(a)) / 86_400_000);
 
 function calToEditable(r: CalRes): EditableReservation {
   return {
@@ -156,14 +151,14 @@ export function OccupancyCalendar({ readOnly = false }: { readOnly?: boolean }) 
 
   // Format helpers
   const fmtDay = (iso: string) => {
-    const d = new Date(iso + "T00:00:00");
+    const d = new Date(iso + "T00:00:00Z");
     return {
-      wd: d.toLocaleDateString("fr-FR", { weekday: "short" }),
-      dm: d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
+      wd: d.toLocaleDateString("fr-FR", { weekday: "short", timeZone: "UTC" }),
+      dm: d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", timeZone: "UTC" }),
     };
   };
   const fmtShort = (iso: string) =>
-    new Date(iso + "T00:00:00").toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+    new Date(iso + "T00:00:00Z").toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
 
   const invalidateAll = () => Promise.all(RESERVATION_QUERY_KEYS.map((k) => qc.invalidateQueries({ queryKey: [k] })));
 
@@ -227,7 +222,7 @@ export function OccupancyCalendar({ readOnly = false }: { readOnly?: boolean }) 
               {days.map((d) => {
                 const f = fmtDay(d);
                 const isToday = d === today;
-                const isSun = new Date(d + "T00:00:00").getDay() === 0;
+                const isSun = new Date(d + "T00:00:00Z").getUTCDay() === 0;
                 return (
                   <div
                     key={d}
@@ -296,7 +291,7 @@ export function OccupancyCalendar({ readOnly = false }: { readOnly?: boolean }) 
                     {/* Background cells */}
                     <div className="absolute inset-0 flex">
                       {days.map((d) => {
-                        const isSun = new Date(d + "T00:00:00").getDay() === 0;
+                        const isSun = new Date(d + "T00:00:00Z").getUTCDay() === 0;
                         const isToday = d === today;
                         return (
                           <div
