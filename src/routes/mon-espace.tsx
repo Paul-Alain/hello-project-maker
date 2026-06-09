@@ -74,16 +74,16 @@ function AccountPage() {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s);
       setChecking(false);
-      if (!s && _e !== "INITIAL_SESSION") navigate({ to: "/auth" });
+      if (!s) navigate({ to: "/auth" });
     });
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        setSession(data.session);
-        setChecking(false);
-      }
-      // Ne pas rediriger ici — laisser onAuthStateChange gérer
-    });
-    return () => sub.subscription.unsubscribe();
+    // Timeout de sécurité — si onAuthStateChange ne répond pas en 3s
+    const timeout = setTimeout(() => {
+      setChecking(false);
+    }, 3000);
+    return () => {
+      sub.subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, [navigate]);
 
   const signOut = async () => {
