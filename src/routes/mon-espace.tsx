@@ -71,19 +71,32 @@ function AccountPage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    // Traiter d'abord le token OAuth dans l'URL (cas Google redirect)
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    const init = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      setSession(session);
       setChecking(false);
-      if (!data.session) navigate({ to: "/auth" });
+
+      if (!session) {
+        navigate({ to: "/auth" });
+      }
+    };
+
+    init();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+
+      if (!session) {
+        navigate({ to: "/auth" });
+      }
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-      if (!s) navigate({ to: "/auth" });
-    });
-
-    return () => sub.subscription.unsubscribe();
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const signOut = async () => {
