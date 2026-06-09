@@ -39,7 +39,8 @@ import { LogementsAdmin } from "@/components/admin/logements-admin";
 import { DocumentationAdmin } from "@/components/admin/documentation-admin";
 
 import { claimAdmin } from "@/lib/admin.functions";
-import { staffGetStatus, adminListMessages } from "@/lib/operations.functions";
+import { staffGetStatus } from "@/lib/operations.functions";
+import { adminListMessages } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
