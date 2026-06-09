@@ -58,6 +58,7 @@ function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [roles, setRoles] = useState<string[]>([]);
   const [claiming, setClaiming] = useState(false);
+  const [ownerMode, setOwnerMode] = useState<"view" | "manager">("view");
 
   const runClaim = useServerFn(claimAdmin);
   const runGetAdminStatus = useServerFn(staffGetStatus);
@@ -130,6 +131,9 @@ function AdminPage() {
     );
   }
 
+  const isOwner = roleTier(roles) === "owner";
+  const ownerViewMode = isOwner && ownerMode === "view";
+
   return (
     <div className="min-h-screen bg-secondary/30">
       <header className="border-b border-border/60 bg-background">
@@ -147,7 +151,7 @@ function AdminPage() {
                 ) : null;
               })()}
 
-            {isAdmin && <AdminNotifications adminId={session.user.id} />}
+            {isAdmin && !ownerViewMode && <AdminNotifications adminId={session.user.id} />}
 
             <Button asChild variant="ghost" size="sm">
               <Link to="/">
@@ -179,7 +183,7 @@ function AdminPage() {
             </Button>
           </div>
         ) : (
-          <AdminDashboard roles={roles} />
+          <AdminDashboard roles={roles} ownerMode={ownerMode} setOwnerMode={setOwnerMode} />
         )}
       </main>
     </div>
