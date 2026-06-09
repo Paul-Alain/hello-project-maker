@@ -197,3 +197,19 @@ export const opModerateReview = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
+
+// ── Supprimer un avis (admin) ────────────────────────────────────────────
+export const opDeleteReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ id: UUID }).parse(input),
+  )
+  .handler(async ({ context, data }) => {
+    await assertStaff(context.supabase, context.userId);
+    const { error } = await context.supabase
+      .from("reviews")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { success: true };
+  });
