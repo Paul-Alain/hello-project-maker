@@ -270,8 +270,10 @@ export const opGetCalendar = createServerFn({ method: "GET" })
       const total = isAnnulee ? rawTotal : Number.isFinite(rawTotal) && rawTotal > 0 ? rawTotal : autoTotal;
       const advance = isAnnulee ? 0 : Number.isFinite(rawAdvance) && rawAdvance >= 0 ? rawAdvance : 0;
       const paid = paidMap.get(r.id) ?? 0;
-      const effectiveUnitId =
-        r.logement_unit_id ?? (r.logement_type ? (firstUnitByType.get(r.logement_type) ?? null) : null);
+      // Only show reservations on the unit they are explicitly assigned to.
+      // Falling back to the first unit of the type caused new (unassigned)
+      // reservations to always appear on the first unit's row.
+      const effectiveUnitId = r.logement_unit_id ?? null;
       return {
         id: r.id,
         ref: shortRef(r.id),
