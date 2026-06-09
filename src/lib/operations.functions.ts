@@ -247,8 +247,6 @@ export const opGetCalendar = createServerFn({ method: "GET" })
     const unitById = new Map(units.map((u) => [u.id, u]));
     const priceByType = new Map<string, number>();
     for (const u of units) if (!priceByType.has(u.type)) priceByType.set(u.type, u.price);
-    const firstUnitByType = new Map<string, string>();
-    for (const u of units) if (!firstUnitByType.has(u.type)) firstUnitByType.set(u.type, u.id);
     const priceOf = (r: ResRow) =>
       (r.logement_unit_id ? unitById.get(r.logement_unit_id)?.price : undefined) ??
       (r.logement_type ? priceByType.get(r.logement_type) : undefined) ??
