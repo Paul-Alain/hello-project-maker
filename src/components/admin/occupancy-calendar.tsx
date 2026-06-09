@@ -50,7 +50,14 @@ interface CalRes {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-const toISO = (d: Date) => todayCam(); // heure Cameroun
+// Convertit une Date JS en "YYYY-MM-DD" selon le fuseau Cameroun (UTC+1, pas de DST)
+const toISO = (d: Date) => {
+  const cam = new Date(d.getTime() + 60 * 60 * 1000); // décalage +1h
+  const y = cam.getUTCFullYear();
+  const m = String(cam.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(cam.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
 
 const addDays = (iso: string, n: number) => {
   const d = new Date(iso + "T00:00:00");
