@@ -225,6 +225,20 @@ Merci de me confirmer la disponibilité et le tarif SVP / Please confirm availab
       toast.error(t.reservation.error);
       return;
     }
+    // Si le client a laissé un message, on en dépose une copie dans
+    // la boîte « Messages » de l'admin pour qu'il soit traité comme
+    // un message client classique (l'email équipe est envoyé via
+    // /api/public/email/reservation-confirmation).
+    const trimmedMessage = form.message.trim();
+    if (trimmedMessage) {
+      supabase.from("messages").insert({
+        name: form.name.trim().slice(0, 120),
+        phone: form.phone.trim().slice(0, 40) || null,
+        email: form.email.trim().slice(0, 160) || null,
+        message: `[Réservation ${typeLabel(form.type)}] ${trimmedMessage}`.slice(0, 2000),
+        user_id: user?.id ?? null,
+      }).then(() => {});
+    }
     // Fire-and-forget: branded guest confirmation plus an automatic alert
     // to the team inbox for every new booking.
     fetch("/api/public/email/reservation-confirmation", {

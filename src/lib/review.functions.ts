@@ -3,7 +3,6 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertStaff } from "@/lib/staff-guard";
 import { enqueueAppEmail } from "@/lib/email/enqueue.server";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const UUID = z.string().uuid();
 
@@ -104,6 +103,7 @@ export const opGetReviewToken = createServerFn({ method: "GET" })
     z.object({ token: z.string().min(1) }).parse(input),
   )
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const sb = supabaseAdmin;
     const { data: row, error } = await sb
       .from("review_tokens")
@@ -132,6 +132,7 @@ export const opSubmitReview = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const sb = supabaseAdmin;
 
     // Vérifier le token

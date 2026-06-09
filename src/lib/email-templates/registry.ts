@@ -5,6 +5,7 @@ import { template as contactConfirmation } from './contact-confirmation'
 import { template as adminReply } from './admin-reply'
 import { template as paymentReceipt } from './payment-receipt'
 import { template as reviewRequest } from './review-request'
+import { template as contactTeamAlert } from './contact-team-alert'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -26,4 +27,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'admin-reply': adminReply,
   'payment-receipt': paymentReceipt,
   'review-request': reviewRequest,
+  'contact-team-alert': contactTeamAlert,
 }
