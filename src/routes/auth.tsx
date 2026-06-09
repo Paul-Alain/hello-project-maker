@@ -137,17 +137,17 @@ function AuthPage() {
 
   const signInWithGoogle = async () => {
     setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: "https://panorama-p-residence.com/mon-espace",
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: "https://panorama-p-residence.com/mon-espace",
+      },
     });
-    if (result.redirected) return;
-    if (result.error) {
+    if (error) {
       setLoading(false);
-      toast.error(result.error.message);
-      return;
+      toast.error(error.message);
     }
-    setLoading(false);
-    navigate({ to: "/mon-espace" });
+    // Pas de setLoading(false) ici car la page va se rediriger vers Google
   };
 
   return (
