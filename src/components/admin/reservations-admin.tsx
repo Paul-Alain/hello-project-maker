@@ -98,14 +98,33 @@ function toEditable(r: ResItem): EditableReservation {
 
 function generateMonthOptions() {
   const options: { value: string; label: string }[] = [];
-  for (let year = 2020; year <= 2050; year++) {
-    for (let month = 1; month <= 12; month++) {
-      const d = new Date(year, month - 1, 1);
+
+  const startYear = 2026;
+  const startMonth = 5; // mai
+
+  const endYear = 2100;
+  const endMonth = 12; // décembre
+
+  for (let year = startYear; year <= endYear; year++) {
+    const monthStart = year === startYear ? startMonth : 1;
+    const monthEnd = year === endYear ? endMonth : 12;
+
+    for (let month = monthStart; month <= monthEnd; month++) {
       const value = `${year}-${String(month).padStart(2, "0")}`;
-      const label = d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-      options.push({ value, label: label.charAt(0).toUpperCase() + label.slice(1) });
+
+      const d = new Date(year, month - 1, 1);
+      const label = d.toLocaleDateString("fr-FR", {
+        month: "long",
+        year: "numeric",
+      });
+
+      options.push({
+        value,
+        label: label.charAt(0).toUpperCase() + label.slice(1),
+      });
     }
   }
+
   return options;
 }
 
