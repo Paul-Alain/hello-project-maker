@@ -9,15 +9,15 @@ const UUID = z.string().uuid();
 function generateToken(): string {
   const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // ── Générer un lien de notation ──────────────────────────────────────────
 export const opGenerateReviewToken = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ reservationId: UUID }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ reservationId: UUID }).parse(input))
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
     const sb = context.supabase;
@@ -37,11 +37,9 @@ export const opGenerateReviewToken = createServerFn({ method: "POST" })
       .eq("reservation_id", data.reservationId)
       .maybeSingle();
 
-    if (existing && !existing.used) {
-      const siteUrl =
-        process.env.SITE_URL ??
-        process.env.VITE_SITE_URL ??
-        "https://www.panorama-p-residence.com";
+    if (existing && !existing.used && new Date(existing.expires_at) > new Date()) {
+      const siteUrl = process.env.SITE_URL ?? "https://panorama-p-residence.com";
+
       return {
         token: existing.token,
         url: `${siteUrl}/noter/${existing.token}`,
@@ -63,10 +61,7 @@ export const opGenerateReviewToken = createServerFn({ method: "POST" })
     });
     if (e1) throw new Error(e1.message);
 
-    const siteUrl =
-      process.env.SITE_URL ??
-      process.env.VITE_SITE_URL ??
-      "https://www.panorama-p-residence.com";
+    const siteUrl = process.env.SITE_URL ?? "https://panorama-p-residence.com";
     const reviewUrl = `${siteUrl}/noter/${token}`;
 
     return {
@@ -83,23 +78,22 @@ export const opGenerateReviewToken = createServerFn({ method: "POST" })
 export const opSendReviewEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({
-      token:      z.string().min(1),
-      email:      z.string().email(),
-      guestName:  z.string().min(1),
-    }).parse(input),
+    z
+      .object({
+        token: z.string().min(1),
+        email: z.string().email(),
+        guestName: z.string().min(1),
+      })
+      .parse(input),
   )
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
-    const siteUrl =
-      process.env.SITE_URL ??
-      process.env.VITE_SITE_URL ??
-      "https://www.panorama-p-residence.com";
+    const siteUrl = process.env.SITE_URL ?? "https://panorama-p-residence.com";
     const reviewUrl = `${siteUrl}/noter/${data.token}`;
     const result = await enqueueAppEmail({
-      templateName:   "review-request",
+      templateName: "review-request",
       recipientEmail: data.email,
-      templateData:   { name: data.guestName, reviewUrl },
+      templateData: { name: data.guestName, reviewUrl },
       idempotencyKey: `review-${data.token}`,
     });
     if (!result.success) throw new Error("Impossible d'envoyer l'email.");
@@ -108,9 +102,7 @@ export const opSendReviewEmail = createServerFn({ method: "POST" })
 
 // ── Récupérer les infos d'un token (page publique) ───────────────────────
 export const opGetReviewToken = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) =>
-    z.object({ token: z.string().min(1) }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(1) }).parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const sb = supabaseAdmin;
@@ -120,25 +112,27 @@ export const opGetReviewToken = createServerFn({ method: "GET" })
       .eq("token", data.token)
       .maybeSingle();
     if (error || !row) return { valid: false, reason: "not_found" as const };
-    if (row.used)   return { valid: false, reason: "used" as const };
+    if (row.used) return { valid: false, reason: "used" as const };
     if (new Date(row.expires_at) < new Date()) return { valid: false, reason: "expired" as const };
     return {
       valid: true,
-      tokenId:       row.id,
+      tokenId: row.id,
       reservationId: row.reservation_id,
-      guestName:     row.guest_name,
+      guestName: row.guest_name,
     };
   });
 
 // ── Soumettre un avis (page publique) ────────────────────────────────────
 export const opSubmitReview = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({
-      token:      z.string().min(1),
-      name:       z.string().min(1).max(120),
-      rating:     z.number().int().min(1).max(5),
-      comment:    z.string().min(1).max(2000),
-    }).parse(input),
+    z
+      .object({
+        token: z.string().min(1),
+        name: z.string().trim().min(1).max(120),
+        rating: z.number().int().min(1).max(5),
+        comment: z.string().min(1).max(2000),
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -151,25 +145,33 @@ export const opSubmitReview = createServerFn({ method: "POST" })
       .eq("token", data.token)
       .maybeSingle();
     if (e0 || !row) throw new Error("Lien invalide.");
-    if (row.used)   throw new Error("Cet avis a déjà été soumis.");
+    if (row.used) throw new Error("Cet avis a déjà été soumis.");
     if (new Date(row.expires_at) < new Date()) throw new Error("Ce lien a expiré.");
 
     // Créer l'avis avec les bonnes colonnes de la table reviews
     const { error: e1 } = await sb.from("reviews").insert({
-      guest_name:      data.name,
-      rating:          data.rating,
-      comment:         data.comment,
-      published:       false,
-      rejected:        false,
+      guest_name: data.name,
+      rating: data.rating,
+      comment: data.comment,
+      published: false,
+      rejected: false,
       review_token_id: row.id,
-      reservation_id:  row.reservation_id,
+      reservation_id: row.reservation_id,
     });
     if (e1) throw new Error(e1.message);
 
     // Marquer le token comme utilisé
-    await sb.from("review_tokens")
-      .update({ used: true, used_at: new Date().toISOString() })
+    const { error: updateError } = await sb
+      .from("review_tokens")
+      .update({
+        used: true,
+        used_at: new Date().toISOString(),
+      })
       .eq("id", row.id);
+
+    if (updateError) {
+      throw new Error(updateError.message);
+    }
 
     return { success: true };
   });
@@ -191,14 +193,16 @@ export const opListReviews = createServerFn({ method: "GET" })
 export const opModerateReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) =>
-    z.object({
-      id:     UUID,
-      action: z.enum(["publish", "unpublish"]),
-    }).parse(input),
+    z
+      .object({
+        id: UUID,
+        action: z.enum(["publish", "unpublish"]),
+      })
+      .parse(input),
   )
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
-    const published  = data.action === "publish";
+    const published = data.action === "publish";
     const { error } = await context.supabase
       .from("reviews")
       .update({ published, rejected: !published })
@@ -210,15 +214,10 @@ export const opModerateReview = createServerFn({ method: "POST" })
 // ── Supprimer un avis (admin) ────────────────────────────────────────────
 export const opDeleteReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ id: UUID }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ id: UUID }).parse(input))
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
-    const { error } = await context.supabase
-      .from("reviews")
-      .delete()
-      .eq("id", data.id);
+    const { error } = await context.supabase.from("reviews").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { success: true };
   });
