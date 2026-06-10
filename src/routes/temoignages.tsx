@@ -24,7 +24,6 @@ function TemoignagesPage() {
   const { t } = useLanguage();
   return (
     <>
-      <PageHeader title={t.testimonials.title} subtitle={t.testimonials.subtitle} />
       <TestimonialsSection />
     </>
   );
