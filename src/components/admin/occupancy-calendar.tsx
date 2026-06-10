@@ -250,19 +250,25 @@ export function OccupancyCalendar({ readOnly = false }: { readOnly?: boolean }) 
               const bars = reservations
                 .filter((r) => r.logement_unit_id === unit.id && r.status !== BLOCK_STATUS)
                 .map((r) => {
-                  // Positions RÉELLES de la réservation (peuvent être négatives
-                  // si l'arrivée est avant la fenêtre, ou >= WINDOW si après).
                   const realStart = dayDiff(start, r.arrival_date);
                   let realEnd = dayDiff(start, r.departure_date);
-                  // Séjour d'un seul jour (arrivée = départ) : forcer largeur ≥ 1
-                  if (realEnd <= realStart) realEnd = realStart + 1;
-                  // CLIPPING uniquement à l'affichage (préserve la position réelle).
+
+                  // Séjour d'un jour : largeur minimale de 1
+                  if (realEnd <= realStart) {
+                    realEnd = realStart + 1;
+                  }
+
+                  // Réservation complètement hors de la fenêtre
+                  if (realEnd <= 0 || realStart >= WINDOW) {
+                    return null;
+                  }
+
                   const startIdx = Math.max(0, realStart);
                   const endIdx = Math.min(WINDOW, realEnd);
+
                   return { r, startIdx, endIdx };
                 })
-                .filter((b) => b.endIdx > b.startIdx && b.startIdx < WINDOW && b.endIdx > 0);
-
+                .filter((b): b is NonNullable<typeof b> => b !== null);
               // Assign vertical lanes so overlapping bars are visibly separated
               const sortedBars = [...bars].sort((a, b) => a.startIdx - b.startIdx);
               const laneEnds: number[] = [];
