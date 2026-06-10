@@ -1,7 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PageHeader } from "@/components/layout/page-header";
 import { TestimonialsSection } from "@/components/sections/testimonials-section";
-import { useLanguage } from "@/lib/i18n/language-context";
 
 export const Route = createFileRoute("/temoignages")({
   head: () => ({
@@ -21,10 +19,8 @@ export const Route = createFileRoute("/temoignages")({
 });
 
 function TemoignagesPage() {
-  const { t } = useLanguage();
   return (
     <>
-      <PageHeader title={t.testimonials.title} subtitle={t.testimonials.subtitle} />
       <TestimonialsSection />
     </>
   );
