@@ -19,7 +19,6 @@ export const Route = createFileRoute("/temoignages")({
 });
 
 function TemoignagesPage() {
-  const { t } = useLanguage();
   return (
     <>
       <TestimonialsSection />
