@@ -38,8 +38,8 @@ export function LogementCard({ logement }: { logement: Logement }) {
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <h3 className="font-display text-xl font-semibold">{title}</h3>
-        <p className="mt-2 line-clamp-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+        <h3 className="font-display text-xl font-semibold whitespace-pre-line">{title}</h3>
+        <p className="mt-2 line-clamp-4 flex-1 text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
           {description}
         </p>
 
