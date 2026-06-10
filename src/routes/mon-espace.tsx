@@ -741,6 +741,18 @@ function MessagesSection({ userId, email }: { userId: string; email: string }) {
         }),
       });
       if (error) throw error;
+
+      // Déclenche la confirmation client + alerte équipe (fire-and-forget).
+      if (email) {
+        fetch("/api/public/email/contact-confirmation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            name: profile?.full_name || email || "Client",
+          }),
+        }).catch(() => {});
+      }
     },
     onSuccess: () => {
       toast.success(t.account.support.success);

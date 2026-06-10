@@ -38,7 +38,10 @@ export const opGenerateReviewToken = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (existing && !existing.used) {
-      const siteUrl = process.env.VITE_SITE_URL ?? "https://panorama-p-residence.com";
+      const siteUrl =
+        process.env.SITE_URL ??
+        process.env.VITE_SITE_URL ??
+        "https://www.panorama-p-residence.com";
       return {
         token: existing.token,
         url: `${siteUrl}/noter/${existing.token}`,
@@ -60,7 +63,10 @@ export const opGenerateReviewToken = createServerFn({ method: "POST" })
     });
     if (e1) throw new Error(e1.message);
 
-    const siteUrl = process.env.VITE_SITE_URL ?? "https://panorama-p-residence.com";
+    const siteUrl =
+      process.env.SITE_URL ??
+      process.env.VITE_SITE_URL ??
+      "https://www.panorama-p-residence.com";
     const reviewUrl = `${siteUrl}/noter/${token}`;
 
     return {
@@ -85,7 +91,10 @@ export const opSendReviewEmail = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     await assertStaff(context.supabase, context.userId);
-    const siteUrl  = process.env.VITE_SITE_URL ?? "https://panorama-p-residence.com";
+    const siteUrl =
+      process.env.SITE_URL ??
+      process.env.VITE_SITE_URL ??
+      "https://www.panorama-p-residence.com";
     const reviewUrl = `${siteUrl}/noter/${data.token}`;
     const result = await enqueueAppEmail({
       templateName:   "review-request",
