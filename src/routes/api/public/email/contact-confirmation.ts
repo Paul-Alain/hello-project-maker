@@ -37,20 +37,26 @@ export const Route = createFileRoute('/api/public/email/contact-confirmation')({
           return Response.json({ success: true, sent: false })
         }
 
-        const result = await enqueueAppEmail({
-          templateName: 'contact-confirmation',
-          recipientEmail: parsed.email,
-          idempotencyKey: `contact-${match.id}`,
-          templateData: {
-            name: parsed.name,
-            message: (match.message ?? '').slice(0, 600),
-          },
-        })
+        const TEAM_EMAIL = 'residencespanoramap@gmail.com'
+        const isTeamSender = parsed.email.trim().toLowerCase() === TEAM_EMAIL
 
-        // Always notify the residence team of the new contact message.
+        // Confirmation au client (skip si l'expéditeur EST l'équipe — évite le doublon)
+        const result = isTeamSender
+          ? { success: true as const }
+          : await enqueueAppEmail({
+              templateName: 'contact-confirmation',
+              recipientEmail: parsed.email,
+              idempotencyKey: `contact-${match.id}`,
+              templateData: {
+                name: parsed.name,
+                message: (match.message ?? '').slice(0, 600),
+              },
+            })
+
+        // Alerte équipe — idempotency key basée sur l'id du message (1 seule alerte par message).
         const teamResult = await enqueueAppEmail({
           templateName: 'contact-team-alert',
-          recipientEmail: 'residencespanoramap@gmail.com',
+          recipientEmail: TEAM_EMAIL,
           idempotencyKey: `contact-team-${match.id}`,
           templateData: {
             name: match.name ?? parsed.name,
