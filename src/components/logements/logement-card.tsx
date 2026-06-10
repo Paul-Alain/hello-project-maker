@@ -38,12 +38,12 @@ export function LogementCard({ logement }: { logement: Logement }) {
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <h3 className="font-display text-xl font-semibold whitespace-pre-line">
+        <h3 className="font-display text-2xl font-semibold whitespace-pre-line">
           {logement.type === "chambre"
             ? "Chambre Élégante\n\n"
             : title}
         </h3>
-        <p className="mt-2 line-clamp-4 flex-1 leading-relaxed text-muted-foreground whitespace-pre-line text-2xl">
+        <p className="mt-2 line-clamp-4 flex-1 leading-relaxed text-muted-foreground whitespace-pre-line text-xl">
           {description}
         </p>
 
