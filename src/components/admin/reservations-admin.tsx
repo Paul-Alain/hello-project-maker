@@ -164,7 +164,7 @@ export function ReservationsAdmin({ readOnly = false }: { readOnly?: boolean }) 
     [data, nowMs],
   );
 
-  const monthOptions = useMemo(() => generateMonthOptions(), []);
+  const monthOptions = generateMonthOptions();
 
   const invalidate = () => Promise.all(RESERVATION_QUERY_KEYS.map((k) => qc.invalidateQueries({ queryKey: [k] })));
 
