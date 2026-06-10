@@ -75,7 +75,7 @@ export function MessagesAdmin() {
 
   const { unread, all } = useMemo(() => ({
     unread: messages.filter((m) => m.status === "nouveau"),
-    all:    messages,
+    all:    messages.filter((m) => m.status !== "nouveau"),
   }), [messages]);
 
   // ── Emails envoyés (email_send_log) ──────────────────────────────────
@@ -129,9 +129,9 @@ export function MessagesAdmin() {
         <div className="space-y-6">
           {/* Non lus */}
           <section className="space-y-3">
-            <h2 className="flex items-center gap-2 font-display text-base font-semibold">
+            <h2 className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-1.5 font-display text-sm font-semibold text-white shadow-soft">
               Nouveaux messages
-              <Badge variant="secondary">{unread.length}</Badge>
+              <Badge variant="secondary" className="bg-white text-red-700">{unread.length}</Badge>
             </h2>
             {loadingMsg ? (
               <Loader2 className="h-5 w-5 animate-spin text-gold" />
@@ -148,7 +148,7 @@ export function MessagesAdmin() {
 
           {/* Tous les messages */}
           <section className="space-y-3">
-            <h2 className="flex items-center gap-2 font-display text-base font-semibold">
+            <h2 className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-1.5 font-display text-sm font-semibold text-foreground shadow-soft">
               Tous les messages
               <Badge variant="secondary">{all.length}</Badge>
             </h2>

@@ -506,7 +506,7 @@ export type Database = {
           {
             foreignKeyName: "review_tokens_reservation_id_fkey"
             columns: ["reservation_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "reservations"
             referencedColumns: ["id"]
           },
@@ -560,7 +560,7 @@ export type Database = {
           {
             foreignKeyName: "reviews_review_token_id_fkey"
             columns: ["review_token_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "review_tokens"
             referencedColumns: ["id"]
           },
