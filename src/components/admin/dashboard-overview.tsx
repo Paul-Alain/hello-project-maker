@@ -570,8 +570,8 @@ function TypeDistributionPie({
                 const base = PIE_COLORS[d.type] ?? BAR_COLOR;
                 return (
                   <radialGradient key={d.type} id={`grad-${d.type}`} cx="35%" cy="35%" r="75%">
-                    <stop offset="0%" stopColor="#ffffff" stopOpacity={0.85} />
-                    <stop offset="45%" stopColor={base} stopOpacity={1} />
+                    <stop offset="0%" stopColor={base} stopOpacity={0.95} />
+                    <stop offset="55%" stopColor={base} stopOpacity={1} />
                     <stop offset="100%" stopColor={base} stopOpacity={1} />
                   </radialGradient>
                 );
@@ -584,11 +584,11 @@ function TypeDistributionPie({
               data={data}
               dataKey="value"
               nameKey="name"
-              cx="50%"
+              cx="42%"
               cy="50%"
-              innerRadius={45}
-              outerRadius={110}
-              paddingAngle={2}
+              innerRadius={0}
+              outerRadius={115}
+              paddingAngle={1}
               stroke="#0f172a"
               strokeWidth={4}
               filter="url(#pie3d-shadow)"
@@ -606,9 +606,11 @@ function TypeDistributionPie({
               }}
             />
             <Legend
-              verticalAlign="bottom"
+              layout="vertical"
+              align="right"
+              verticalAlign="middle"
               iconType="circle"
-              wrapperStyle={{ fontSize: 13, fontWeight: 600, paddingTop: 8 }}
+              wrapperStyle={{ fontSize: 13, fontWeight: 600, paddingLeft: 12 }}
             />
           </PieChart>
         </ResponsiveContainer>
