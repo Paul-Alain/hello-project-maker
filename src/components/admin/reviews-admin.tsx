@@ -2,10 +2,17 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Star, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Loader2, Star, Eye, EyeOff, Trash2, Copy, RotateCcw, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { opListReviews, opModerateReview, opDeleteReview } from "@/lib/review.functions";
+import { Input } from "@/components/ui/input";
+import {
+  opListReviews,
+  opModerateReview,
+  opDeleteReview,
+  opGetPublicReviewLink,
+  opResetPublicReviewLink,
+} from "@/lib/review.functions";
 
 export function ReviewsAdmin() {
   const qc = useQueryClient();
@@ -59,6 +66,8 @@ export function ReviewsAdmin() {
 
   return (
     <div className="space-y-8">
+      <PublicReviewLinkCard />
+
       {/* En attente */}
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
