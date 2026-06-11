@@ -207,3 +207,66 @@ function ReviewCard({
     </div>
   );
 }
+
+function PublicReviewLinkCard() {
+  const runGet = useServerFn(opGetPublicReviewLink);
+  const runReset = useServerFn(opResetPublicReviewLink);
+  const qc = useQueryClient();
+  const [resetting, setResetting] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["public-review-link"],
+    queryFn: () => runGet(),
+    staleTime: Infinity,
+  });
+
+  const copy = async () => {
+    if (!data?.url) return;
+    try {
+      await navigator.clipboard.writeText(data.url);
+      toast.success("Lien copié.");
+    } catch {
+      toast.error("Impossible de copier le lien.");
+    }
+  };
+
+  const reset = async () => {
+    if (!confirm("Réinitialiser le lien ? L'ancien lien ne fonctionnera plus.")) return;
+    setResetting(true);
+    try {
+      await runReset();
+      await qc.invalidateQueries({ queryKey: ["public-review-link"] });
+      toast.success("Lien réinitialisé.");
+    } catch {
+      toast.error("Erreur lors de la réinitialisation.");
+    }
+    setResetting(false);
+  };
+
+  return (
+    <section className="rounded-xl border border-border/60 bg-card p-4 shadow-soft space-y-3">
+      <h2 className="flex items-center gap-2 font-display text-lg font-semibold">
+        <Link2 className="h-5 w-5 text-gold" />
+        Lien public d'avis
+      </h2>
+      <p className="text-sm text-muted-foreground">
+        Partagez ce lien permanent à vos clients pour qu'ils déposent un avis.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          readOnly
+          value={isLoading ? "Chargement..." : (data?.url ?? "")}
+          className="flex-1 min-w-[240px] font-mono text-xs"
+          onFocus={(e) => e.currentTarget.select()}
+        />
+        <Button size="sm" variant="gold" onClick={copy} disabled={!data?.url}>
+          <Copy className="h-4 w-4" /> Copier
+        </Button>
+        <Button size="sm" variant="outline" onClick={reset} disabled={resetting}>
+          {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
+          Réinitialiser
+        </Button>
+      </div>
+    </section>
+  );
+}
