@@ -546,10 +546,6 @@ function RowActions({
     }
   };
 
-  if (r.displayStatus === "logé" && linkExpired) {
-    return null;
-  }
-
   if (r.displayStatus === "logé") {
     return (
       <div className="flex items-center justify-end gap-1">
@@ -559,36 +555,6 @@ function RowActions({
           </Button>
         ) : (
           <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />
-        )}
-        {!reviewUrl ? (
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-amber-400 text-amber-700 hover:bg-amber-50"
-            disabled={genBusy}
-            onClick={generateLink}
-          >
-            {genBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Star className="h-3.5 w-3.5" />}
-            Lien avis
-          </Button>
-        ) : (
-          <div className="flex items-center gap-1">
-            <Button size="sm" variant="outline" onClick={copyLink} title="Copier le lien">
-              <Copy className="h-3.5 w-3.5" />
-              {copied ? "Copié !" : "Copier"}
-            </Button>
-            {r.email && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-blue-700 border-blue-400 hover:bg-blue-50"
-                onClick={sendEmail}
-                title="Envoyer par email"
-              >
-                <Mail className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
         )}
       </div>
     );
