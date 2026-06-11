@@ -530,3 +530,89 @@ function AggregateCard({ label, value, sub }: { label: string; value: string; su
     </div>
   );
 }
+
+// ── 3D-look pie chart for type distribution ──────────────────────────────
+function TypeDistributionPie({
+  rows,
+  metric,
+  metricValue,
+}: {
+  rows: any[];
+  metric: MetricKey;
+  metricValue: (r: any) => number;
+}) {
+  const data = rows
+    .map((r) => ({
+      type: r.type,
+      name: TYPE_LABELS[r.type] ?? r.label,
+      value: metricValue(r),
+      count: r.count ?? 0,
+    }))
+    .filter((d) => d.value > 0);
+
+  const total = data.reduce((s, d) => s + d.value, 0);
+
+  if (total === 0) {
+    return (
+      <div className="mt-4 rounded-xl border-2 border-black/10 bg-secondary/40 p-6 text-center text-sm text-muted-foreground">
+        Aucune donnée à afficher
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border-2 border-black/10 bg-gradient-to-br from-white to-secondary/30 p-4 shadow-md">
+      <div className="h-80 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <defs>
+              {data.map((d) => {
+                const base = PIE_COLORS[d.type] ?? BAR_COLOR;
+                return (
+                  <radialGradient key={d.type} id={`grad-${d.type}`} cx="35%" cy="35%" r="75%">
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity={0.85} />
+                    <stop offset="45%" stopColor={base} stopOpacity={1} />
+                    <stop offset="100%" stopColor={base} stopOpacity={1} />
+                  </radialGradient>
+                );
+              })}
+              <filter id="pie3d-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000" floodOpacity="0.25" />
+              </filter>
+            </defs>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={45}
+              outerRadius={110}
+              paddingAngle={2}
+              stroke="#0f172a"
+              strokeWidth={4}
+              filter="url(#pie3d-shadow)"
+              label={({ percent }: any) => `${Math.round((percent ?? 0) * 100)}%`}
+              labelLine={false}
+            >
+              {data.map((d) => (
+                <Cell key={d.type} fill={`url(#grad-${d.type})`} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(v: number, _n: any, p: any) => {
+                const pct = total ? ((v / total) * 100).toFixed(1) : "0";
+                return [`${pct}% (${p?.payload?.count ?? 0} rés.)`, p?.payload?.name];
+              }}
+            />
+            <Legend
+              verticalAlign="bottom"
+              iconType="circle"
+              wrapperStyle={{ fontSize: 13, fontWeight: 600, paddingTop: 8 }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
