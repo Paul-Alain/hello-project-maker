@@ -49,9 +49,9 @@ const TYPE_LABELS: Record<string, string> = {
 const BAR_COLOR = "#1d4ed8";
 
 const PIE_COLORS: Record<string, string> = {
-  chambre: "#1d4ed8",
-  studio: "#f59e0b",
-  appartement: "#10b981",
+  chambre: "#1e3a8a",
+  studio: "#7c2d12",
+  appartement: "#064e3b",
 };
 
 // ── Date helpers ─────────────────────────────────────────────────────────
