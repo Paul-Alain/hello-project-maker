@@ -258,3 +258,43 @@ export const opDeleteReview = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { success: true };
   });
+
+// ── Lien public permanent (admin) ────────────────────────────────────────
+async function ensurePublicReviewLink() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: existing } = await supabaseAdmin
+    .from("public_review_links")
+    .select("token")
+    .eq("id", true)
+    .maybeSingle();
+  if (existing) return existing.token;
+  const token = generateToken();
+  const { error } = await supabaseAdmin
+    .from("public_review_links")
+    .insert({ id: true, token });
+  if (error) throw new Error(error.message);
+  return token;
+}
+
+export const opGetPublicReviewLink = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const token = await ensurePublicReviewLink();
+    const siteUrl = process.env.SITE_URL ?? "https://panorama-p-residence.com";
+    return { token, url: `${siteUrl}/noter/${token}` };
+  });
+
+export const opResetPublicReviewLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const token = generateToken();
+    const { error } = await supabaseAdmin
+      .from("public_review_links")
+      .upsert({ id: true, token }, { onConflict: "id" });
+    if (error) throw new Error(error.message);
+    const siteUrl = process.env.SITE_URL ?? "https://panorama-p-residence.com";
+    return { token, url: `${siteUrl}/noter/${token}` };
+  });
