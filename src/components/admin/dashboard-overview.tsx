@@ -1,7 +1,18 @@
 import { useMemo, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  LabelList,
+  PieChart,
+  Pie,
+  Legend,
+} from "recharts";
 import { Loader2, AlertTriangle, CheckCircle2, BedDouble } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +47,12 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const BAR_COLOR = "#1d4ed8";
+
+const PIE_COLORS: Record<string, string> = {
+  chambre: "#1d4ed8",
+  studio: "#f59e0b",
+  appartement: "#10b981",
+};
 
 // ── Date helpers ─────────────────────────────────────────────────────────
 function isoDay(d: Date): string {
@@ -388,19 +405,7 @@ export function DashboardOverview({ readOnly = false }: { readOnly?: boolean } =
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                {rows.map((r) => (
-                  <div key={r.type} className="rounded-xl border-2 border-black/10 bg-secondary/40 p-3 shadow-sm">
-                    <p className="text-xs font-semibold">{TYPE_LABELS[r.type] ?? r.label}</p>
-                    <p className="mt-1 font-display text-base font-bold tabular-nums text-blue-700">
-                      {metric === "count" ? r.count : money(metricValue(r))}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {r.count} réservation{r.count > 1 ? "s" : ""}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <TypeDistributionPie rows={rows} metric={metric} metricValue={metricValue} />
             </div>
           </div>
         )}
@@ -522,6 +527,92 @@ function AggregateCard({ label, value, sub }: { label: string; value: string; su
       <p className="text-sm font-semibold opacity-80">{label}</p>
       <p className="mt-1 font-display text-3xl font-bold tabular-nums">{value}</p>
       <p className="mt-1 text-xs opacity-70">{sub}</p>
+    </div>
+  );
+}
+
+// ── 3D-look pie chart for type distribution ──────────────────────────────
+function TypeDistributionPie({
+  rows,
+  metric,
+  metricValue,
+}: {
+  rows: any[];
+  metric: MetricKey;
+  metricValue: (r: any) => number;
+}) {
+  const data = rows
+    .map((r) => ({
+      type: r.type,
+      name: TYPE_LABELS[r.type] ?? r.label,
+      value: metricValue(r),
+      count: r.count ?? 0,
+    }))
+    .filter((d) => d.value > 0);
+
+  const total = data.reduce((s, d) => s + d.value, 0);
+
+  if (total === 0) {
+    return (
+      <div className="mt-4 rounded-xl border-2 border-black/10 bg-secondary/40 p-6 text-center text-sm text-muted-foreground">
+        Aucune donnée à afficher
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border-2 border-black/10 bg-gradient-to-br from-white to-secondary/30 p-4 shadow-md">
+      <div className="h-80 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <defs>
+              {data.map((d) => {
+                const base = PIE_COLORS[d.type] ?? BAR_COLOR;
+                return (
+                  <radialGradient key={d.type} id={`grad-${d.type}`} cx="35%" cy="35%" r="75%">
+                    <stop offset="0%" stopColor="#ffffff" stopOpacity={0.85} />
+                    <stop offset="45%" stopColor={base} stopOpacity={1} />
+                    <stop offset="100%" stopColor={base} stopOpacity={1} />
+                  </radialGradient>
+                );
+              })}
+              <filter id="pie3d-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000" floodOpacity="0.25" />
+              </filter>
+            </defs>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={45}
+              outerRadius={110}
+              paddingAngle={2}
+              stroke="#0f172a"
+              strokeWidth={4}
+              filter="url(#pie3d-shadow)"
+              label={({ percent }: any) => `${Math.round((percent ?? 0) * 100)}%`}
+              labelLine={false}
+            >
+              {data.map((d) => (
+                <Cell key={d.type} fill={`url(#grad-${d.type})`} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(v: number, _n: any, p: any) => {
+                const pct = total ? ((v / total) * 100).toFixed(1) : "0";
+                return [`${pct}% (${p?.payload?.count ?? 0} rés.)`, p?.payload?.name];
+              }}
+            />
+            <Legend
+              verticalAlign="bottom"
+              iconType="circle"
+              wrapperStyle={{ fontSize: 13, fontWeight: 600, paddingTop: 8 }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
