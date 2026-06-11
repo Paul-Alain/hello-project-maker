@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from "recharts";
 import { Loader2, TrendingUp, Wallet, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -118,6 +119,12 @@ export function AnalyticsAdmin() {
                     {data.revenueByType.map((_, i) => (
                       <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
                     ))}
+                    <LabelList
+                      dataKey="expected"
+                      position="top"
+                      formatter={(v: number) => formatMoney(Number(v), residence.currency)}
+                      style={{ fontSize: 18, fontWeight: "bold", fill: "#000" }}
+                    />
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
