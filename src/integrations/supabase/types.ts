@@ -342,6 +342,27 @@ export type Database = {
         }
         Relationships: []
       }
+      public_review_links: {
+        Row: {
+          created_at: string
+          id: boolean
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: boolean
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: boolean
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reservations: {
         Row: {
           advance_amount: number

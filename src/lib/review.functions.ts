@@ -111,7 +111,25 @@ export const opGetReviewToken = createServerFn({ method: "GET" })
       .select("id, reservation_id, guest_name, used, expires_at")
       .eq("token", data.token)
       .maybeSingle();
-    if (error || !row) return { valid: false, reason: "not_found" as const };
+    if (!row) {
+      // Fallback : lien public permanent
+      const { data: pub } = await sb
+        .from("public_review_links")
+        .select("token")
+        .eq("token", data.token)
+        .maybeSingle();
+      if (pub) {
+        return {
+          valid: true,
+          tokenId: null,
+          reservationId: null,
+          guestName: null,
+          isPublic: true,
+        };
+      }
+      return { valid: false, reason: "not_found" as const };
+    }
+    if (error) return { valid: false, reason: "not_found" as const };
     if (row.used) return { valid: false, reason: "used" as const };
     if (new Date(row.expires_at) < new Date()) return { valid: false, reason: "expired" as const };
     return {
@@ -119,6 +137,7 @@ export const opGetReviewToken = createServerFn({ method: "GET" })
       tokenId: row.id,
       reservationId: row.reservation_id,
       guestName: row.guest_name,
+      isPublic: false,
     };
   });
 
@@ -144,7 +163,25 @@ export const opSubmitReview = createServerFn({ method: "POST" })
       .select("id, reservation_id, used, expires_at")
       .eq("token", data.token)
       .maybeSingle();
-    if (e0 || !row) throw new Error("Lien invalide.");
+    if (e0) throw new Error("Lien invalide.");
+    if (!row) {
+      // Tentative : lien public permanent
+      const { data: pub } = await sb
+        .from("public_review_links")
+        .select("token")
+        .eq("token", data.token)
+        .maybeSingle();
+      if (!pub) throw new Error("Lien invalide.");
+      const { error: ePub } = await sb.from("reviews").insert({
+        guest_name: data.name,
+        rating: data.rating,
+        comment: data.comment,
+        published: false,
+        rejected: false,
+      });
+      if (ePub) throw new Error(ePub.message);
+      return { success: true };
+    }
     if (row.used) throw new Error("Cet avis a déjà été soumis.");
     if (new Date(row.expires_at) < new Date()) throw new Error("Ce lien a expiré.");
 
@@ -220,4 +257,44 @@ export const opDeleteReview = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("reviews").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { success: true };
+  });
+
+// ── Lien public permanent (admin) ────────────────────────────────────────
+async function ensurePublicReviewLink() {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: existing } = await supabaseAdmin
+    .from("public_review_links")
+    .select("token")
+    .eq("id", true)
+    .maybeSingle();
+  if (existing) return existing.token;
+  const token = generateToken();
+  const { error } = await supabaseAdmin
+    .from("public_review_links")
+    .insert({ id: true, token });
+  if (error) throw new Error(error.message);
+  return token;
+}
+
+export const opGetPublicReviewLink = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const token = await ensurePublicReviewLink();
+    const siteUrl = process.env.SITE_URL ?? "https://panorama-p-residence.com";
+    return { token, url: `${siteUrl}/noter/${token}` };
+  });
+
+export const opResetPublicReviewLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertStaff(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const token = generateToken();
+    const { error } = await supabaseAdmin
+      .from("public_review_links")
+      .upsert({ id: true, token }, { onConflict: "id" });
+    if (error) throw new Error(error.message);
+    const siteUrl = process.env.SITE_URL ?? "https://panorama-p-residence.com";
+    return { token, url: `${siteUrl}/noter/${token}` };
   });
