@@ -399,7 +399,7 @@ export function DashboardOverview({ readOnly = false }: { readOnly?: boolean } =
                         dataKey="value"
                         position="top"
                         formatter={(v: number) => (metric === "count" ? String(v) : money(v))}
-                        style={{ fontSize: 12, fontWeight: 700, fill: "#1d4ed8" }}
+                        style={{ fontSize: 18, fontWeight: "bold", fill: "#000" }}
                       />
                     </Bar>
                   </BarChart>
@@ -592,7 +592,22 @@ function TypeDistributionPie({
               stroke="#0f172a"
               strokeWidth={4}
               filter="url(#pie3d-shadow)"
-              label={({ percent }: any) => `${Math.round((percent ?? 0) * 100)}%`}
+              label={(props: any) => {
+                const { x, y, textAnchor, percent } = props;
+                return (
+                  <text
+                    x={x}
+                    y={y}
+                    fill="#000"
+                    textAnchor={textAnchor}
+                    dominantBaseline="central"
+                    fontSize={18}
+                    fontWeight="bold"
+                  >
+                    {`${Math.round((percent ?? 0) * 100)}%`}
+                  </text>
+                );
+              }}
               labelLine={false}
             >
               {data.map((d) => (
