@@ -1,7 +1,18 @@
 import { useMemo, useState, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  LabelList,
+  PieChart,
+  Pie,
+  Legend,
+} from "recharts";
 import { Loader2, AlertTriangle, CheckCircle2, BedDouble } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +47,12 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const BAR_COLOR = "#1d4ed8";
+
+const PIE_COLORS: Record<string, string> = {
+  chambre: "#1d4ed8",
+  studio: "#f59e0b",
+  appartement: "#10b981",
+};
 
 // ── Date helpers ─────────────────────────────────────────────────────────
 function isoDay(d: Date): string {
@@ -388,19 +405,7 @@ export function DashboardOverview({ readOnly = false }: { readOnly?: boolean } =
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                {rows.map((r) => (
-                  <div key={r.type} className="rounded-xl border-2 border-black/10 bg-secondary/40 p-3 shadow-sm">
-                    <p className="text-xs font-semibold">{TYPE_LABELS[r.type] ?? r.label}</p>
-                    <p className="mt-1 font-display text-base font-bold tabular-nums text-blue-700">
-                      {metric === "count" ? r.count : money(metricValue(r))}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {r.count} réservation{r.count > 1 ? "s" : ""}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <TypeDistributionPie rows={rows} metric={metric} metricValue={metricValue} />
             </div>
           </div>
         )}
