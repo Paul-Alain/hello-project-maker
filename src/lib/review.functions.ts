@@ -111,7 +111,25 @@ export const opGetReviewToken = createServerFn({ method: "GET" })
       .select("id, reservation_id, guest_name, used, expires_at")
       .eq("token", data.token)
       .maybeSingle();
-    if (error || !row) return { valid: false, reason: "not_found" as const };
+    if (!row) {
+      // Fallback : lien public permanent
+      const { data: pub } = await sb
+        .from("public_review_links")
+        .select("token")
+        .eq("token", data.token)
+        .maybeSingle();
+      if (pub) {
+        return {
+          valid: true,
+          tokenId: null,
+          reservationId: null,
+          guestName: null,
+          isPublic: true,
+        };
+      }
+      return { valid: false, reason: "not_found" as const };
+    }
+    if (error) return { valid: false, reason: "not_found" as const };
     if (row.used) return { valid: false, reason: "used" as const };
     if (new Date(row.expires_at) < new Date()) return { valid: false, reason: "expired" as const };
     return {
@@ -119,6 +137,7 @@ export const opGetReviewToken = createServerFn({ method: "GET" })
       tokenId: row.id,
       reservationId: row.reservation_id,
       guestName: row.guest_name,
+      isPublic: false,
     };
   });
 
@@ -144,7 +163,25 @@ export const opSubmitReview = createServerFn({ method: "POST" })
       .select("id, reservation_id, used, expires_at")
       .eq("token", data.token)
       .maybeSingle();
-    if (e0 || !row) throw new Error("Lien invalide.");
+    if (e0) throw new Error("Lien invalide.");
+    if (!row) {
+      // Tentative : lien public permanent
+      const { data: pub } = await sb
+        .from("public_review_links")
+        .select("token")
+        .eq("token", data.token)
+        .maybeSingle();
+      if (!pub) throw new Error("Lien invalide.");
+      const { error: ePub } = await sb.from("reviews").insert({
+        guest_name: data.name,
+        rating: data.rating,
+        comment: data.comment,
+        published: false,
+        rejected: false,
+      });
+      if (ePub) throw new Error(ePub.message);
+      return { success: true };
+    }
     if (row.used) throw new Error("Cet avis a déjà été soumis.");
     if (new Date(row.expires_at) < new Date()) throw new Error("Ce lien a expiré.");
 
